@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-import { dirname, resolve, join } from 'node:path';
+import { dirname, resolve as resolvePath, join } from 'node:path';
 
 // This development script is never copied into the browser build.
 const command = process.argv[2] || 'check';
@@ -22,7 +22,7 @@ await access(npx).catch(() => { throw new Error('Could not locate npm. Run this 
 const sanitize = text => text.split(key).join('[REDACTED]').replace(/dlr_live_[A-Za-z0-9_-]+/g, '[REDACTED]');
 async function cli(args, logName) {
   const output = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [npx, '--yes', '--package=dreamlayer@0.3.0', 'dreamlayer', ...args, '--json'], { shell: false, windowsHide: true, env: { ...process.env, DREAMLAYER_API_KEY: key, npm_config_cache: resolve('artifacts/npm-cache') } });
+    const child = spawn(process.execPath, [npx, '--yes', '--package=dreamlayer@0.3.0', 'dreamlayer', ...args, '--json'], { shell: false, windowsHide: true, env: { ...process.env, DREAMLAYER_API_KEY: key, npm_config_cache: resolvePath('artifacts/npm-cache') } });
     let stdout = '', stderr = '';
     child.stdout.on('data', c => { stdout += c; }); child.stderr.on('data', c => { stderr += c; }); child.on('error', reject);
     child.on('close', code => resolve({ code, stdout: sanitize(stdout), stderr: sanitize(stderr) }));
@@ -46,7 +46,12 @@ const balance = await cli(['balance'], 'balance');
 const capabilities = await cli(['capabilities'], 'capabilities');
 console.log('DreamLayer connection verified. Balance and capabilities checked without generating an image.');
 for (const value of jsonValues(balance.stdout)) console.log(JSON.stringify(value));
-if (command === 'check') { console.log('Run npm run art:generate for a bounded batch of three ordinary images (up to 3 credits).'); process.exit(0); }
+if (command === 'check') {
+  const available = jsonValues(balance.stdout).find(value => Number.isSafeInteger(value?.available))?.available;
+  if (available === 0) console.log('The API balance is zero. Confirm that your jam credits have been added to the account that created this key before generating artwork.');
+  else console.log('Run npm run art:generate for a bounded batch of three ordinary images (up to 3 credits).');
+  process.exit(0);
+}
 
 const prompts = JSON.parse(await readFile('assets/prompts.json', 'utf8'));
 const manifest = JSON.parse(await readFile('assets/manifest.json', 'utf8'));
