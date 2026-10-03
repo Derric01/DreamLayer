@@ -2,86 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#172e39">
-  <meta name="description" content="Deliver places, not letters. A tiny puzzle game about postage stamps containing impossible worlds.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101e2c">
+  <meta name="description" content="Borrow a world from a postage stamp. Four impossible letters, twelve lost memories, one way home.">
   <title>POSTMARK · The impossible post office</title>
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="desk">
-    <header class="desk-header">
-      <a class="wordmark" href="./" aria-label="POSTMARK home">POSTMARK<span class="wordmark-dot">✳</span></a>
-      <span class="office-name">The impossible post office</span>
-      <div class="header-actions">
-        <button id="sound" class="quiet-button" aria-pressed="false" aria-label="Enable sound">Sound off</button>
-        <button id="help" class="quiet-button">How to play</button>
-      </div>
+  <main id="game-shell" class="game-shell" data-mode="intro">
+    <header class="game-hud">
+      <a class="wordmark" href="./" aria-label="POSTMARK home">POSTMARK<span aria-hidden="true">✳</span></a>
+      <div class="room-heading"><span id="room-number">Night shift</span><h1 id="room-title">The impossible post office</h1></div>
+      <ol id="letter-progress" class="letter-progress" aria-label="Letter progress"></ol>
+      <nav class="header-actions" aria-label="Game controls">
+        <button id="sound" class="hud-button" aria-pressed="false" aria-label="Enable sound" title="Sound">Sound off</button>
+        <button id="fullscreen" class="hud-button icon-button" aria-label="Enter fullscreen" title="Fullscreen">⛶</button>
+        <button id="help" class="hud-button icon-button" aria-label="How to play" title="How to play">?</button>
+        <button id="pause" class="hud-button icon-button" aria-label="Pause game, Escape" title="Pause" disabled>Ⅱ</button>
+      </nav>
     </header>
-
-    <section class="game-frame" aria-label="POSTMARK game">
-      <div class="room-header">
-        <div><span id="room-number" class="room-number">Night shift</span><h1 id="room-title">Some places need a little postage.</h1></div>
-        <div id="room-actions" class="room-actions" hidden><button id="pause" class="quiet-button" aria-label="Pause game, Escape">Pause</button><button id="restart" class="quiet-button" aria-label="Restart room, R">Restart <span aria-hidden="true">↺</span></button></div>
+    <section class="stage-wrap" aria-label="Playable room">
+      <canvas id="game" width="1100" height="620" tabindex="0" aria-label="Move with A and D or arrows. Hold Space to jump higher. Shift or X dashes. F uses the current world ability. Select stamps with 1, 2, 3, Q and E choose frames, Enter places. Escape pauses."></canvas>
+      <div class="room-note" id="room-note" hidden><span id="room-hint"></span><span id="delivery-progress">0 / 4 delivered</span></div>
+      <div class="memory-hud" id="memory-hud" hidden><span aria-hidden="true">✧</span><span id="memory-count">0 / 3</span><small>lost memories</small></div>
+      <div id="intro" class="intro-overlay">
+        <article class="intro-letter">
+          <span class="letter-salutation">The impossible post office</span>
+          <h2>POSTMARK<span aria-hidden="true">✳</span></h2>
+          <p class="intro-tagline">Some addresses only exist<br>if someone remembers them.</p>
+          <p class="intro-copy">Borrow the sea, the forest, and the sky from three little stamps. Make a path through the night. Deliver the last letter home.</p>
+          <button id="start" class="primary-button">Begin your shift <span aria-hidden="true">→</span></button>
+          <span class="intro-footnote">Four letters · Twelve lost memories · No rush</span>
+        </article>
+        <div class="intro-postmark" aria-hidden="true"><span>UNDELIVERABLE</span><b>UNTIL TONIGHT</b><small>HANDLE WITH CARE</small></div>
+        <span class="start-controls">A D move · Space jump · Shift dash · F world pulse</span>
       </div>
-      <div class="stage-wrap">
-        <canvas id="game" width="1100" height="620" tabindex="0" aria-label="Puzzle room. Move with A and D or arrow keys. Jump with Space. Select a stamp with 1, 2, or 3, then select a socket with Q and E and place with Enter."></canvas>
-        <div id="intro" class="intro-overlay">
-          <div class="intro-letter">
-            <span class="letter-salutation">Dear night clerk,</span>
-            <h2>Deliver places.<br> <em>Not just letters.</em></h2>
-            <p>These letters have nowhere to go. Borrow a world from a postage stamp. Make a way through. Find the address.</p>
-            <button id="start" class="primary-button">Begin your shift <span aria-hidden="true">→</span></button>
-            <span class="intro-footnote">Four letters. Three little worlds. One way home.</span>
-          </div>
-          <div class="intro-postmark" aria-hidden="true"><span>IMPOSSIBLE</span><b>POST OFFICE</b><small>OPEN ALL NIGHT</small></div>
-        </div>
-        <div id="delivery" class="delivery-overlay" hidden>
-          <article class="delivery-letter">
-            <span id="delivery-label" class="letter-salutation">Delivered, at last.</span>
-            <h2 id="delivery-title"></h2>
-            <p id="delivery-copy"></p>
-            <button id="next" class="primary-button">Open next letter <span aria-hidden="true">→</span></button>
-          </article>
-        </div>
-        <div id="toast" class="game-toast" role="status" aria-live="polite"></div>
+      <div id="delivery" class="delivery-overlay" hidden>
+        <article class="delivery-letter"><span id="delivery-label" class="letter-salutation"></span><h2 id="delivery-title"></h2><p id="delivery-copy"></p><div id="delivery-stats" class="delivery-stats"></div><button id="next" class="primary-button">Open next letter <span aria-hidden="true">→</span></button></article>
       </div>
-      <div class="room-note"><span class="note-marker" aria-hidden="true">✎</span><p id="room-hint">A stamp is a little world. Put it somewhere unexpected.</p><span id="delivery-progress" class="delivery-progress">0 / 4 delivered</span></div>
+      <div id="toast" class="game-toast" role="status" aria-live="polite"></div>
     </section>
-
-    <section class="tool-tray" aria-label="Your stamps">
-      <div class="tray-label"><h2>Borrow a world</h2><p id="selection-hint">Select a stamp, then a dotted frame.</p></div>
+    <section class="tool-tray" aria-label="Stamps and abilities">
       <div class="stamps">
-        <button class="stamp-button ocean" data-stamp="ocean" draggable="false" aria-pressed="false" aria-label="Ocean stamp, key 1. Floats the wooden crate."><span class="stamp-art" data-art="ocean"></span><span class="stamp-caption"><span><b>Ocean</b><small>Float a crate</small></span><kbd>1</kbd></span></button>
-        <button class="stamp-button forest" data-stamp="forest" draggable="false" aria-pressed="false" aria-label="Forest stamp, key 2. Grows a bridge."><span class="stamp-art" data-art="forest"></span><span class="stamp-caption"><span><b>Forest</b><small>Grow a bridge</small></span><kbd>2</kbd></span></button>
-        <button class="stamp-button sky" data-stamp="sky" draggable="false" aria-pressed="false" aria-label="Sky stamp, key 3. Reverses gravity."><span class="stamp-art" data-art="sky"></span><span class="stamp-caption"><span><b>Sky</b><small>Turn gravity over</small></span><kbd>3</kbd></span></button>
+        <button class="stamp-button ocean" data-stamp="ocean" draggable="false" aria-pressed="false"><span class="stamp-art" data-art="ocean" aria-hidden="true"></span><span class="stamp-caption"><b>Ocean</b><small>Raise the tide</small></span><kbd>1</kbd><span class="stamp-state">Locked</span></button>
+        <button class="stamp-button forest" data-stamp="forest" draggable="false" aria-pressed="false"><span class="stamp-art" data-art="forest" aria-hidden="true"></span><span class="stamp-caption"><b>Forest</b><small>Grow a bridge</small></span><kbd>2</kbd><span class="stamp-state">Locked</span></button>
+        <button class="stamp-button sky" data-stamp="sky" draggable="false" aria-pressed="false"><span class="stamp-art" data-art="sky" aria-hidden="true"></span><span class="stamp-caption"><b>Sky</b><small>Turn gravity over</small></span><kbd>3</kbd><span class="stamp-state">Locked</span></button>
       </div>
-      <div class="tray-actions"><button id="undo" class="reclaim-button" aria-label="Undo last stamp move, Z" disabled><span aria-hidden="true">↶</span>Undo stamp</button><button id="reclaim" class="reclaim-button" disabled><span aria-hidden="true">×</span>Reclaim stamp</button></div>
+      <div class="tray-actions"><button id="undo" class="hud-button" aria-label="Undo stamp, Z" title="Undo stamp, Z" disabled>↶<span>Undo</span></button><button id="reclaim" class="hud-button" aria-label="Reclaim selected stamp, Backspace" title="Reclaim stamp" disabled>×<span>Reclaim</span></button><button id="map" class="hud-button" aria-pressed="false" title="Room overview, M">⊞<span>Map</span></button></div>
+      <div class="ability-controls">
+        <button id="dash-control" class="ability-button" data-control="dash" aria-label="Fold dash, Shift or X"><span>Fold dash <kbd>Shift</kbd></span><small id="dash-state">Ready</small><i id="dash-meter" aria-hidden="true"></i></button>
+        <button id="pulse-control" class="ability-button" data-control="pulse" aria-label="World pulse, F"><span id="ability-name">World pulse</span><small id="pulse-state">Borrow a world</small><i id="pulse-meter" aria-hidden="true"></i></button>
+      </div>
+      <p id="selection-hint" class="selection-hint">Select a stamp, then its dotted frame.</p>
     </section>
-
-    <div class="touch-controls" aria-label="Movement controls">
-      <div><button data-control="left" aria-label="Move left">←</button><button data-control="right" aria-label="Move right">→</button></div>
-      <button data-control="jump" aria-label="Jump">Jump ↑</button>
-    </div>
-    <footer class="desk-footer"><span>Move <kbd>A</kbd> <kbd>D</kbd> <span class="or">/</span> <kbd>←</kbd> <kbd>→</kbd><span class="control-divider">·</span>Jump <kbd>Space</kbd><span class="control-divider">·</span>Restart <kbd>R</kbd></span><span>Handle impossible things with care.</span></footer>
+    <div class="touch-controls" aria-label="Movement controls"><div><button data-control="left" aria-label="Move left">←</button><button data-control="right" aria-label="Move right">→</button></div><button data-control="jump" aria-label="Jump">Jump ↑</button></div>
+    <footer class="desk-footer"><span>A D / arrows move · Hold Space to jump higher · Shift / X dash · F world pulse</span><span>Every letter finds a way.</span></footer>
   </main>
-
-  <dialog id="help-dialog">
+  <dialog id="help-dialog" aria-labelledby="help-title">
     <form method="dialog"><button class="close-button" aria-label="Close instructions">×</button></form>
-    <span class="letter-salutation">A note for the night clerk</span>
-    <h2>A little world goes a long way.</h2>
-    <p>Walk your paper courier to the glowing letter. Select or drag a stamp onto a dotted frame to borrow its world.</p>
-    <dl><div><dt>Ocean</dt><dd>Raises the wooden crate. Step onto it before raising the tide.</dd></div><div><dt>Forest</dt><dd>Grows a bridge. Move the same stamp to another frame when you reach solid ground.</dd></div><div><dt>Sky</dt><dd>Reverses gravity inside the blue frame. Walk under a ceiling, then leave the frame to fall normally.</dd></div></dl>
-    <p>Select a stamp to preview its effect. Each stamp exists in one place. Moving or reclaiming it removes the old effect. Undo restores the previous stamp placement; your courier keeps their position. Falling clears undo history. There is no timer and no penalty for falling.</p>
-    <p class="keyboard-help">Keyboard: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> select a stamp, <kbd>Q</kbd> / <kbd>E</kbd> choose a frame, <kbd>Enter</kbd> place, <kbd>Backspace</kbd> reclaim, <kbd>Z</kbd> undo a stamp move. <kbd>A</kbd> / <kbd>D</kbd> move, <kbd>Space</kbd> jump, <kbd>R</kbd> restart, <kbd>Esc</kbd> pause.</p>
+    <span class="letter-salutation">A note for the night clerk</span><h2 id="help-title">Borrow a world. Make a way.</h2>
+    <p>Reach the glowing letter. Select a stamp to preview its effect, then click its dotted frame or drag the stamp into place. Each stamp exists in one place; moving it removes the previous effect.</p>
+    <dl><div><dt>Ocean</dt><dd>Raises the crate. Inside the tide, F launches a <strong>Tide vault</strong>.</dd></div><div><dt>Forest</dt><dd>Grows a bridge you can jump through from below. Stand on a root and press F for a <strong>Root spring</strong>.</dd></div><div><dt>Sky</dt><dd>Reverses local gravity. F briefly releases you from it so you can drop and dash.</dd></div></dl>
+    <p><strong>Fold dash:</strong> Shift / X bursts horizontally. Landing, a world pulse, or finding a memory recharges it. Chain a vault into a dash to reach hidden memories. Hold jump for height; release early for a short hop.</p>
+    <p>Glowing ✧ memories are optional. Checkpoint lanterns remember solid ground. Falling returns your letter safely; there are no lives or time limits.</p>
+    <p>1 / 2 / 3 select · Q / E choose frame · Enter place · Backspace reclaim · Z undo a stamp · M map · R restart · Esc pause. Undo changes stamps, not courier position.</p>
     <form method="dialog"><button class="primary-button">Back to the desk</button></form>
   </dialog>
   <dialog id="pause-dialog" aria-labelledby="pause-title">
-    <span class="letter-salutation">The letters can wait.</span>
-    <h2 id="pause-title">Take a little breather.</h2>
-    <p>Your place at the desk is safe. Resume whenever you are ready.</p>
+    <span class="letter-salutation">The letters can wait.</span><h2 id="pause-title">Take a little breather.</h2><p>Your place at the desk is safe.</p>
     <form method="dialog"><button id="resume" class="primary-button" autofocus>Resume your shift <span aria-hidden="true">→</span></button></form>
+    <div class="pause-actions"><button id="restart" class="hud-button">Restart this letter</button><button id="new-shift" class="hud-button">Start a new shift</button></div>
   </dialog>
   <script type="module" src="./src/main.js"></script>
 </body>

@@ -1,6 +1,8 @@
 # POSTMARK
 
-A small puzzle game about postage stamps containing miniature worlds. Work the night shift at an impossible post office and deliver four letters by borrowing Ocean, Forest, and Sky.
+Borrow a world from a postage stamp. Work the night shift at an impossible post office and deliver four letters with Ocean, Forest, and Sky.
+
+A short puzzle platformer with reusable world stamps, a fold dash, three contextual abilities, twelve optional memories, and a complete journey home. The game fills its viewport; phones follow the courier, while selecting a stamp opens the whole-room map. There are no lives or time limits.
 
 ## Play locally
 
@@ -10,32 +12,56 @@ Requires Node.js 22.12 or newer. No dependency installation is needed for the ga
 npm run dev
 ```
 
-Open http://127.0.0.1:4173. On Windows PowerShell with script execution restricted, use `npm.cmd` in place of `npm`.
+Open http://127.0.0.1:4173. On Windows PowerShell with script execution restricted, use `npm.cmd`.
 
-- Move: A / D or arrow keys.
-- Jump: Space / W / Up.
-- Choose a stamp: click it, or press 1 / 2 / 3.
-- Place: click its dotted frame, or drag it from the tray.
-- Keyboard frames: Q / E select; Enter places.
-- Reclaim: the tray button, Backspace, or right-click in the room.
-- Undo the last stamp move: the tray button or Z.
-- Pause / resume: Escape or the Pause button.
-- Restart room: R.
-- Touch movement buttons appear on small screens or devices with coarse pointers.
+| Action | Controls |
+| --- | --- |
+| Move | A / D or arrows |
+| Jump; release early for a shorter hop | Space / W / Up |
+| Fold dash | Shift / X |
+| Borrowed-world ability | F |
+| Select Ocean / Forest / Sky | 1 / 2 / 3, or the stamp tray |
+| Place a stamp | Click its frame or world region; drag from the tray |
+| Select a frame; place | Q / E; Enter |
+| Reclaim a stamp | Backspace, tray button, or right-click |
+| Undo a stamp move | Z or tray button |
+| Whole-room map | M or Map |
+| Pause / resume | Escape or Pause |
+| Restart this letter | R or the pause menu |
+| Fullscreen; optional sound | Header controls |
 
-Ocean raises a floating crate. Forest creates a bridge; moving it removes the previous bridge. Sky reverses gravity only inside its marked region. Selecting a stamp previews its effect before placement; Q / E or hovering a matching frame changes the preview. Undo restores earlier stamp placements without rewinding the courier. Falling clears undo history, returns you to the room start, and resets Ocean so its lift remains accessible. Both Help and Pause freeze the simulation and clear held movement. Progress between letters is saved locally when the browser permits storage. Sound is optional and starts after an explicit interaction.
+Touch controls support simultaneous movement and jumping. Dash and world abilities have their own tray buttons. Native fullscreen depends on the browser and embedding permissions; the game also adapts to its ordinary viewport.
 
-## DreamLayer art workflow
+## Borrowed worlds and movement
 
-**Current provenance is authoritative in `assets/manifest.json`.** Until that manifest records real outputs, the game uses original procedural landscape fallback graphics and has not yet satisfied the jam's DreamLayer requirement.
+Ocean raises a floating crate; inside its field, **Tide vault** launches the courier. Forest creates a one-way root bridge; standing on it unlocks **Root spring**. Sky reverses gravity inside its marked region; **Sky release** briefly restores normal gravity so you can drop before gravity returns.
 
-1. Copy `.env.example` to `.env.local`. Set `DREAMLAYER_API_KEY` there, or provide it in your local environment. Do not put a key in browser code, a commit, or chat.
-2. Run `npm run art:check`. The development script uses the official `dreamlayer@0.3.0` CLI through npm, with its cache scoped to ignored project artifacts. It checks balance and capabilities without image generation. This step needs network access.
-3. Run `npm run art:generate`. The initial batch is three ordinary image operations, up to three credits: an Ocean master, then Forest and Sky edits using that master as a reference. Existing saved outputs are reused. Failed commands are not automatically retried; stable request identities and local logs preserve recovery information.
-4. Inspect the three PNGs. Their prompts, operations, references, and available execution IDs are recorded in the manifest. The images appear both in the tray stamps and in their playable world regions. The game makes no live DreamLayer requests.
-5. Rebuild and rerun browser validation after changing art.
+Chain a vault or spring into a dash, or dash out of a gravity field. Landing, a world pulse, a gravity change, and finding a memory recharge the air dash. Buffered jumps and a short grace period at ledges make controls forgiving. Optional glowing memories give each room an additional movement route.
 
-The prompts are in `assets/prompts.json`. CLI behavior is based on the official [DreamLayer command-line guide](https://docs.dreamlayer.io/cli). The generation workflow is unverified until a configured account completes an actual request; CLI/API compatibility errors must be resolved against the installed version rather than hidden.
+Each stamp exists in one frame at a time. Moving Forest removes its old bridge. Selecting a stamp previews its effect without changing physics. Undo restores up to 64 previous stamp placements without rewinding the courier.
+
+Lantern checkpoints in the Forest and Home rooms remember safe ground. A fall preserves collected memories and returns you immediately; the start respawn also resets Ocean so a raised lift cannot strand you. Restart resets the room. Help and Pause freeze simulation and clear held input. Room progress and shift totals are saved when browser storage is available. The final letter shows your memories and safe returns, then offers a fresh shift.
+
+## Presentation and performance
+
+A dark postal desk, illustrated stamp worlds, paper courier, warm home window, letter transitions, seeded particles, dash afterimages, landing squash, gravity feedback, and restrained impact shake support the action. Audio is synthesized locally and optional. Reduced motion suppresses particles, trails, shake, and cosmetic movement while retaining readable gameplay.
+
+Simulation runs at a fixed 60 Hz with render interpolation and bounded catch-up. Landscape art and room scenes are cached. Particles, rings, trails, and pixel density are capped. There are no runtime dependencies, remote fonts, analytics, or live image-generation calls.
+
+## DreamLayer and reliable fallback
+
+**Current provenance is authoritative in `assets/manifest.json`.** The configured key authenticates, but its latest available API balance is zero. No credits have been spent and no DreamLayer images have been generated. The playable build uses original procedural artwork; the jam's DreamLayer requirement still needs actual generated assets.
+
+The API creates landscape art during development. Players need no key, account, or credits. The three resulting PNGs are used both in the stamp tray and inside the playable fields.
+
+1. Copy `.env.example` to ignored `.env.local`, then set `DREAMLAYER_API_KEY` there or in your environment. Never put a key in browser code, commits, or chat.
+2. Run `npm run art:check`. The development script uses the official `dreamlayer@0.3.0` CLI, with its npm cache in ignored project artifacts. Balance and capability checks do not generate images.
+3. Run `npm run art:generate` once credits are available. The initial batch is three ordinary operations, up to three credits: an Ocean master, then Forest and Sky edits using that master. Saved outputs are reused; failures are not automatically retried. Stable request identities and sanitized local logs support recovery.
+4. Inspect the PNGs and provenance in the manifest, then rebuild and rerun browser validation.
+
+Prompts are in `assets/prompts.json`. The generation workflow follows the official [DreamLayer CLI guide](https://docs.dreamlayer.io/cli); completing an actual generation remains unverified with the current zero-credit account.
+
+The local deterministic landscapes and effects are visible immediately. Artwork loads asynchronously as an enhancement, with a 2.5-second deadline for the manifest and each image. Missing art, HTTP errors, rate limits, malformed data, corrupt images, slow responses, or unavailable storage leave the game playable. Browser code loads only validated local filenames and never sends credentials to the API. An API outage during development therefore cannot interrupt a player's game.
 
 ## Validate and package
 
@@ -46,18 +72,20 @@ npm run build
 npm run test:browser
 ```
 
-Simulation tests exercise the complete routes through all four puzzles using real movement, including stamp reuse, undo, gravity boundaries, and recovery. Syntax checks cover the game and Node tooling. The browser smoke test loads the packaged build in headless Chrome or Edge, checks controls, effect previews, undo, pointer placement, pause/resume, help, replay, mobile layout, and reduced motion, and saves screenshots to ignored `artifacts/`.
+The 31 deterministic tests cover all four original solutions, all twelve optional memories, dash and variable jumps, contextual abilities, one-way roots, swept collisions, undo, checkpoints, recovery, and bounded artwork failure handling.
 
-The Windows browser harness additionally requires Python and its `websocket-client` package. Set `POSTMARK_CHROME` or `POSTMARK_PYTHON` if your binaries are in different locations. Browser tooling is separate from the game and never packaged.
+The packaged-browser harness plays all four deliveries through actual keyboard input, exercises pointer dragging, abilities, undo, native fullscreen, pause, victory/replay, multi-touch, reduced motion, unavailable storage, and art fault injection. It checks laptop, ultrawide, phone, landscape, and tablet layouts, captures screenshots, and records draw-call and animation-frame timings in ignored `artifacts/browser-results.json`.
 
-`dist/postmark-itch.zip` is the browser upload. The ZIP contains `index.html` at its root, all modules, and the local assets. `npm run dev -- --dist` serves the packaged files for review. The build deliberately reports when DreamLayer art is pending.
+On Windows the browser harness requires Chrome/Edge, Python, and `websocket-client`. Set `POSTMARK_CHROME` or `POSTMARK_PYTHON` if needed. Each run uses its own test profile and debugging port; tooling is never packaged. Mobile checks use browser emulation, not physical devices.
+
+`dist/postmark-itch.zip` contains root `index.html`, all six game modules, styles, and local assets. Environment files and development tooling are excluded. `npm run dev -- --dist` serves the upload for review. The build reports pending DreamLayer art honestly.
 
 ## Submission
 
-Use `docs/itch-submission.md` as the itch.io description. Upload the ZIP as an HTML game, choose “This file will be played in the browser,” and enable fullscreen. Suggested embed size: 1200 × 1050 with a resizable viewport. Include screenshots and the actual asset manifest/provenance evidence. Test the uploaded itch build before submitting it to the jam. Publishing and submission require the project owner's action or explicit authorization.
+Use `docs/itch-submission.md` for the itch.io description after completing its art provenance section. Upload the ZIP as an HTML game, choose “This file will be played in the browser,” and enable fullscreen and a resizable viewport. A 1280 × 800 embed is a useful desktop starting point. Test the uploaded build before submitting. Publishing, merging, deploying, and jam submission require the owner's instruction.
 
-## Architecture
+## Architecture and limits
 
-`src/engine.js` is a fixed-step simulation independent of DOM and rendering. `src/levels.js` contains four authored rooms. `src/renderer.js` paints the postal world and local images. `src/main.js` handles controls and game state. `src/audio.js` synthesizes small feedback sounds. Node built-ins serve, check, and package the game. There are no runtime dependencies or remotely loaded fonts.
+`src/engine.js` holds DOM-independent physics, `src/levels.js` holds four authored rooms, `src/renderer.js` draws the world, `src/art.js` validates optional bundled imagery, `src/main.js` handles controls and flow, and `src/audio.js` synthesizes cues. Node built-ins serve, check, and package the game.
 
-Known accessibility limit: the game is a visual spatial platformer, with keyboard and touch alternatives, readable labels, non-color-only stamp identities, and reduced-motion support; it does not provide a nonvisual mode.
+This is a visual spatial platformer with keyboard/touch alternatives, visible focus, readable controls, shape/text stamp identifiers, and reduced-motion support. It has no nonvisual mode. Fullscreen, audio, and device performance depend on the host browser.

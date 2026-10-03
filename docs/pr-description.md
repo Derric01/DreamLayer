@@ -1,11 +1,20 @@
-# Build POSTMARK, a four-room postage-world puzzle game
+# Build POSTMARK, an immersive world-stamp puzzle platformer
 
-POSTMARK gives the player three reusable postage stamps whose worlds alter authored physics: Ocean raises a crate, Forest creates a bridge, and Sky reverses gravity inside its frame. Four hand-authored rooms introduce the rules and end with delivery to the courier's childhood home.
+POSTMARK is a four-letter puzzle platformer set in an impossible post office. Reusable Ocean, Forest, and Sky stamps raise crates, grow paths, and reverse local gravity. A fold dash, Tide vault, Root spring, Sky release, and twelve optional memories add movement combinations while the original four authored puzzle routes remain solvable.
 
-The game runs as a self-contained HTML/Canvas build with keyboard, pointer, and touch controls, optional synthesized audio, room restart, local progress, and reduced cosmetic motion. Selecting a stamp previews its lift, bridge, or gravity effect without changing physics. Undo restores previous stamp placements, and an explicit pause dialog freezes the simulation and clears held movement. Undo history clears on respawn to keep the lift reachable.
+The game fills its viewport, with a courier-following phone camera and a whole-room stamp map. A postal HUD, ability readiness, lantern checkpoints, seeded effects, afterimages, landing feedback, restrained shake, optional synthesized audio, paused dialogs, and a complete letter/victory/replay flow make actions and progression readable. One-way root bridges and swept vertical collision checks fix late-jump and thin-platform edge cases. Reduced motion, multitouch, input queuing, and unavailable-storage handling preserve reliable play.
 
-A development-only DreamLayer workflow checks capabilities and credits, generates an Ocean master with Forest/Sky reference edits, and records provenance. Generated images are bundled into the browser build; credentials and tooling are excluded. Players need no API key or credits.
+DreamLayer is a development art workflow: an Ocean master and Forest/Sky reference edits become local stamp and world-region PNGs, with actual provenance in the manifest. Credentials and generation tooling are excluded from the browser build. Deterministic artwork appears immediately; bounded asynchronous loading safely handles missing, slow, malformed, rate-limited, or corrupt art.
 
-DreamLayer authentication and free account capability checks succeeded. Artwork generation awaits available jam API credits. The asset manifest marks current procedural fallback art honestly, and the submission description contains a corresponding completion note.
+Validation:
 
-Validation: 15 deterministic gameplay tests pass, including complete solutions for all four rooms, bridge/gravity undo, and checkpoint recovery. JavaScript syntax checks and ZIP integrity checks pass. Headless Chrome smoke tests complete the first delivery through actual keyboard input and cover effect previews, keyboard/button undo, pause/resume, stamp dragging, help, replay, packaged modules, laptop/mobile layouts down to 320px, and reduced motion; screenshots were visually reviewed. No production deployment or itch.io publication was performed.
+- 31 deterministic tests pass, covering all four original solutions, all twelve memories, movement abilities, undo, checkpoints, collision regressions, and artwork error/deadline behavior.
+- Actual packaged Chrome keyboard playthrough completes every letter and all twelve memories with zero falls, then restarts through the victory UI.
+- Browser checks pass for drag placement, keyboard/button undo, pause/help, native fullscreen, multitouch, reduced motion, storage failure, and six artwork failure/success fixtures.
+- Laptop, ultrawide, 320px/390px phone, phone landscape, and tablet layouts pass overflow checks. Short-screen endings retain access to replay. Captures are visually reviewed.
+- Syntax/build/ZIP checks pass; the ZIP has root index.html and ten public files, with no environment files or development tooling.
+- Local headless Chrome timing is recorded in ignored artifacts/browser-results.json. Mobile checks are emulated; physical device and uploaded itch.io testing remain separate.
+
+The configured DreamLayer key authenticates, but available credits are zero. No generation has run or credits been spent. Current landscapes are original procedural fallback art, and the manifest explicitly records pending generation. Keep this PR draft until actual DreamLayer artwork is generated and reviewed for the jam requirement.
+
+No merge, production deployment, itch.io publication, or submission is included.

@@ -12,7 +12,8 @@ export const LEVELS = [
     sockets: [{ id: 'tide', type: 'ocean', x: 520, y: 225, field: p(365, 205, 290, 375), float: { ...p(455, 540, 140, 24), targetY: 306 } }],
     address: 'The Sea,\nWhere the shoreline used to be.',
     letter: { title: 'The sea writes back.', body: '“Thank you for finding the shore.\nI had forgotten the sound of someone arriving.”\n\nOne letter delivered. Somewhere, a tide turns.' },
-    scenery: 'ocean'
+    scenery: 'ocean',
+    memories: [{ x: 270, y: 510, word: 'salt' }, { x: 490, y: 415, word: 'tide' }, { x: 820, y: 218, word: 'shore' }]
   },
   {
     title: 'To the forest between two footsteps', subtitle: 'One stamp, two bridges',
@@ -25,7 +26,9 @@ export const LEVELS = [
     ],
     address: 'The Forest,\nBetween the first step and the second.',
     letter: { title: 'A path remembers you.', body: '“I thought a forest needed a thousand trees.\nPerhaps it only needs someone willing to cross.”\n\nThe roots fold themselves neatly back into the stamp.' },
-    scenery: 'forest'
+    scenery: 'forest',
+    checkpoint: { spawn: { x: 486, y: 398 }, region: p(455, 390, 110, 42) },
+    memories: [{ x: 380, y: 450, word: 'root' }, { x: 520, y: 288, word: 'path' }, { x: 731, y: 240, word: 'moss' }]
   },
   {
     title: 'To the sky beneath your feet', subtitle: 'The other side of up',
@@ -35,7 +38,8 @@ export const LEVELS = [
     sockets: [{ id: 'updraft', type: 'sky', x: 550, y: 355, field: p(260, 60, 560, 550) }],
     address: 'The Sky,\nUnderneath everything you know.',
     letter: { title: 'Up was a matter of opinion.', body: '“Everyone looks up to find me.\nYou were the first to look the other way.”\n\nThere is one envelope left. The handwriting looks familiar.' },
-    scenery: 'sky'
+    scenery: 'sky',
+    memories: [{ x: 450, y: 162, word: 'cloud' }, { x: 650, y: 330, word: 'drift' }, { x: 896, y: 154, word: 'light' }]
   },
   {
     title: 'To the place you used to call home', subtitle: 'The last address',
@@ -49,6 +53,8 @@ export const LEVELS = [
     ],
     address: 'You,\nThe house at the end of the lane.\nBefore you grew up.',
     letter: { title: 'You found your way home.', body: '“I left the light on.\nI knew you would remember the address.”\n\nThe sea settles. The forest rests. The sky turns right side up.\nFour impossible letters, delivered with care.' },
-    scenery: 'home'
+    scenery: 'home',
+    checkpoint: { spawn: { x: 590, y: 308 }, region: p(570, 295, 110, 47) },
+    memories: [{ x: 408, y: 425, word: 'lane' }, { x: 736, y: 190, word: 'window' }, { x: 868, y: 220, word: 'home' }]
   }
 ];

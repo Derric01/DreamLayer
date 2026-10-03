@@ -6,28 +6,31 @@ product
 
 ## Users
 
-Game-jam players and DreamLayer hiring reviewers playing a short browser game on desktop, with touch controls available on mobile. They should understand the first puzzle without opening documentation.
+Game-jam players and DreamLayer hiring reviewers playing a short browser game on desktop or phone. They should understand the first puzzle without reading external documentation.
 
 ## Product Purpose
 
-A complete four-room puzzle platformer about moving miniature worlds between postage stamps. Ocean floats a platform, Forest grows a bridge, and Sky reverses gravity in a bounded region. Reclaiming or moving a stamp removes its old effect. Deliver the last letter to the courier's childhood home.
+A complete four-room puzzle platformer about moving miniature worlds between postage stamps. Ocean floats a platform, Forest grows a bridge, and Sky reverses local gravity. Each world also grants a contextual movement ability. A fold dash and twelve optional memories add mastery routes without increasing the number of rooms. Deliver the last letter to the courier's childhood home.
 
 ## Brand Personality
 
-Strange, tactile, tender. The user approved the postal-desk world: worn envelopes, ink cancellation marks, perforated stamps, and vivid landscapes spilling into paper. The interface supports play; the game itself carries the visual identity.
+Strange, tactile, tender. An impossible post office at night: worn envelopes, cancellation marks, perforated stamps, vivid landscapes spilling into blue ink, and a warm light at the last address. The game fills the viewport and carries the visual identity.
 
 ## Anti-references
 
-Avoid a dashboard surrounding the game, an asset-generation tech demo, generic fantasy ruins, decorative statistics, or pixel-art promises that the image workflow cannot reliably keep.
+Avoid dashboards surrounding gameplay, an asset-generation tech demo, generic fantasy ruins, punitive timers, grinding, decorative statistics, or pixel-art promises the image workflow cannot reliably keep.
 
 ## Design Principles
 
-- Make the effects of each stamp readable in the room itself.
-- Teach one rule at a time, then combine rules in the final delivery.
-- Make every failure recoverable immediately.
-- Keep the narrative in the letters rather than lengthy exposition.
-- Use DreamLayer-generated landscape assets in playable stamp regions and record their provenance honestly.
+- Make every stamp's physical effect readable in its room.
+- Teach one world at a time, then combine them in the final delivery.
+- Use movement abilities and optional memories for replay depth.
+- Give placement, jumping, landing, dash, pulse, gravity, memory, and delivery distinct feedback.
+- Make failure immediately recoverable; safe lantern checkpoints preserve progress within longer rooms.
+- Keep narrative in short letters, ending with a complete replay loop.
+- Render a deterministic local world immediately; validated bundled art enhances it without blocking play.
+- Record actual DreamLayer provenance honestly.
 
 ## Accessibility & Inclusion
 
-Keyboard alternatives to drag-and-drop, visible focus, named controls, large touch targets, readable contrast, optional audio, reduced-motion support, and shape/text identifiers in addition to color. Platforming requires visual spatial interaction; the game does not claim full nonvisual accessibility.
+Keyboard alternatives to dragging, visible focus, readable labels, simultaneous touch controls, optional audio, reduced-motion support, and shape/text identifiers alongside color. Phone gameplay follows the courier; the map reveals all stamp frames. Short screens can scroll title/letter overlays to reach actions. Platforming requires visual spatial interaction; no full nonvisual accessibility claim.

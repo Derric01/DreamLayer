@@ -3,152 +3,180 @@ import { spawn } from 'node:child_process';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { browser, waitFor } from './cdp.mjs';
 
-const port = 4187, base = `http://127.0.0.1:${port}`;
+const port = 4187, base = 'http://127.0.0.1:' + port;
 const server = spawn(process.execPath, ['scripts/serve.mjs', '--dist'], { env: { ...process.env, POSTMARK_PORT: String(port) }, windowsHide: true, stdio: 'ignore' });
-let chrome;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+let chrome;
+const shots = [], outcomes = [], faults = [];
 try {
   await waitFor(async () => { try { return (await fetch(base)).ok; } catch { return false; } }, 'server start');
-  assert.equal((await fetch(`${base}/.env.local`)).status, 404);
-  assert.equal((await fetch(`${base}/package.json`)).status, 404);
+  for (const path of ['.env.local', '.env', '.git/config', 'package.json']) assert.equal((await fetch(base + '/' + path)).status, 404);
   chrome = await browser(); await mkdir('artifacts', { recursive: true });
-  await chrome.call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1150, deviceScaleFactor: 1, mobile: false });
-  await chrome.call('Page.navigate', { url: `${base}/?test=1` });
-  await waitFor(() => chrome.evaluate('!!window.__POSTMARK__'), 'game load'); await sleep(120);
-  async function capture(name) { const { data } = await chrome.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); await writeFile(`artifacts/${name}.png`, Buffer.from(data, 'base64')); }
-  async function click(selector) { const p = await chrome.evaluate(`(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`); await chrome.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...p, button: 'left', clickCount: 1 }); await chrome.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...p, button: 'left', clickCount: 1 }); }
-  async function key(key, down = true, code = key) {
-    const special = { Enter: 13, Escape: 27, Backspace: 8, ' ': 32 };
-    const windowsVirtualKeyCode = special[key] ?? (key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0);
-    const text = down && key === 'Enter' ? '\r' : down && key === ' ' ? ' ' : undefined;
-    await chrome.call('Input.dispatchKeyEvent', { type: down ? 'keyDown' : 'keyUp', key, code, windowsVirtualKeyCode, text });
+  const ev = code => chrome.evaluate(code);
+  const g = '__POSTMARK__.game';
+  async function capture(name) { const { data } = await chrome.call('Page.captureScreenshot', { format: 'png' }); await writeFile('artifacts/' + name + '.png', Buffer.from(data, 'base64')); shots.push(name); }
+  async function clickAt(p) { await chrome.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...p, button: 'left', clickCount: 1 }); await chrome.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...p, button: 'left', clickCount: 1 }); await sleep(35); }
+  async function center(selector) { return ev('(() => {const r=document.querySelector(' + JSON.stringify(selector) + ').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()'); }
+  async function click(selector) { await clickAt(await center(selector)); }
+  async function world(x,y) { return ev('(() => {const p=__POSTMARK__.renderer.worldToScreen(' + x + ',' + y + '),r=document.querySelector("#game").getBoundingClientRect();return {x:r.x+p.x,y:r.y+p.y}})()'); }
+  async function key(key, down = true) {
+    const special = { Enter:13, Escape:27, Backspace:8, ' ':32, Shift:16 };
+    const code = key === ' ' ? 'Space' : key === 'Shift' ? 'ShiftLeft' : key.length === 1 && /[a-z]/i.test(key) ? 'Key' + key.toUpperCase() : key;
+    await chrome.call('Input.dispatchKeyEvent', { type: down ? 'keyDown' : 'keyUp', key, code, windowsVirtualKeyCode:special[key] ?? (key.length===1 ? key.toUpperCase().charCodeAt(0):0), text:down && key==='Enter' ? '\r' : down && key===' ' ? ' ' : undefined });
   }
-  async function tapKey(k) { await key(k); await key(k, false); }
-
-  await capture('desktop-title'); await click('#start');
-  assert.equal(await chrome.evaluate('__POSTMARK__.mode'), 'playing');
-  assert.equal(await chrome.evaluate('document.activeElement.id'), 'game');
-  await click('#sound'); assert.equal(await chrome.evaluate('document.querySelector("#sound").getAttribute("aria-pressed")'), 'true');
-  await click('#sound'); assert.equal(await chrome.evaluate('document.querySelector("#sound").getAttribute("aria-pressed")'), 'false');
-  assert.equal(await chrome.evaluate('document.activeElement.id'), 'game', 'sound toggle returns focus to gameplay');
-  await chrome.evaluate('document.querySelector("#game").focus()');
-  await tapKey('1'); await sleep(60); await capture('desktop-ocean-preview');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null, 'preview does not place a stamp');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.floats[0].y'), 540, 'preview does not move the crate');
-  await tapKey('Enter'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide');
-  await tapKey('Backspace'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null);
-  await tapKey('z'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide', 'Z undoes a reclaim');
-  await click('#undo'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null, 'undo button restores an empty frame');
-  assert.equal(await chrome.evaluate('document.querySelector("#undo").disabled'), true, 'undo disables when history is empty');
-  await key('d'); await tapKey('Escape');
-  assert.equal(await chrome.evaluate('document.querySelector("#pause-dialog").open'), true, 'Escape opens pause');
-  const pauseTime = await chrome.evaluate('__POSTMARK__.game.time'); await sleep(170);
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.time'), pauseTime, 'pause freezes the simulation');
-  await key('d', false); assert.equal(await chrome.evaluate('document.activeElement.id'), 'resume', 'pause focuses its resume action'); await tapKey('Enter');
-  assert.equal(await chrome.evaluate('document.querySelector("#pause-dialog").open'), false, 'Enter resumes through the focused native button');
-  assert.equal(await chrome.evaluate('document.activeElement.id'), 'game');
-  assert.equal(await chrome.evaluate('__POSTMARK__.input.right'), false, 'pause clears held movement');
-  const beforeX = await chrome.evaluate('__POSTMARK__.game.player.x'); await key('d'); await sleep(200); await key('d', false);
-  assert.ok(await chrome.evaluate('__POSTMARK__.game.player.x') > beforeX + 20, 'keyboard moves courier');
-  await click('#help'); const paused = await chrome.evaluate('__POSTMARK__.game.time'); await sleep(170); assert.equal(await chrome.evaluate('__POSTMARK__.game.time'), paused, 'help pauses simulation');
-  await chrome.evaluate('document.querySelector("#help-dialog").close()');
-  await tapKey('r'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null);
-  // Exercise pointer capture and actual drag-and-drop from the tray to the scene.
-  const drag = await chrome.evaluate(`(() => { const b=document.querySelector('[data-stamp="ocean"]').getBoundingClientRect(), c=document.querySelector('#game').getBoundingClientRect(); return {from:{x:b.x+b.width/2,y:b.y+b.height/2},to:{x:c.x+c.width*520/1100,y:c.y+c.height*225/620}}; })()`);
-  await chrome.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...drag.from, button: 'left', clickCount: 1 });
-  await chrome.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...drag.to, button: 'left', buttons: 1 });
-  await chrome.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...drag.to, button: 'left', clickCount: 1 });
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide');
-  await sleep(150); await capture('desktop-ocean');
-
-  // Complete the first delivery using actual browser keyboard controls.
-  await click('#restart');
-  await waitFor(() => chrome.evaluate('__POSTMARK__.game.player.grounded'), 'courier settles at start');
-  async function moveTo(x, jump = false) {
-    await key('d'); if (jump) await key(' ', true, 'Space');
-    try { await waitFor(() => chrome.evaluate(`__POSTMARK__.game.player.x >= ${x} || __POSTMARK__.game.delivered`), `walk to ${x}`); }
-    finally { await key('d', false); if (jump) await key(' ', false, 'Space'); }
+  async function tap(keyName) { await key(keyName); await key(keyName,false); await sleep(40); }
+  async function load() { await chrome.call('Page.navigate',{url:base+'/?test=1'}); await waitFor(()=>ev('!!window.__POSTMARK__'),'game load'); await sleep(100); }
+  async function settle() { await waitFor(()=>ev(g+'.player.grounded || '+g+'.delivered'),'courier lands'); }
+  async function moveTo(x, jump=false) {
+    if(await ev(g+'.player.x >= '+x+' || '+g+'.delivered')) return;
+    await key('d'); if(jump) await key(' ');
+    try { assert.equal(await ev('new Promise(resolve => {const end=performance.now()+10000;function check(){if('+g+'.player.x >= '+x+' || '+g+'.delivered)return resolve(true);if(performance.now()>end)return resolve(false);requestAnimationFrame(check)}check()})'),true,'walk to '+x); }
+    finally { await key('d',false); if(jump) await key(' ',false); }
   }
-  await moveTo(310); await moveTo(480, true);
-  await waitFor(() => chrome.evaluate('__POSTMARK__.game.player.grounded && __POSTMARK__.game.player.riding === "tide"'), 'land on the crate');
-  await tapKey('1'); await tapKey('Enter');
-  await waitFor(() => chrome.evaluate('__POSTMARK__.game.floats[0].y <= 306.1'), 'tide lifts the courier', 10000);
-  await moveTo(540); await sleep(150); await moveTo(748, true);
-  await waitFor(() => chrome.evaluate('__POSTMARK__.game.player.grounded || __POSTMARK__.game.delivered'), 'land at the address');
-  await moveTo(935); await waitFor(() => chrome.evaluate('__POSTMARK__.mode === "letter"'), 'first letter opens');
-  assert.equal(await chrome.evaluate('document.querySelector("#delivery-title").textContent'), 'The sea writes back.');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.deaths'), 0, 'first delivery succeeds through real controls without falls');
-  await capture('desktop-first-delivery'); await click('#next');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.index'), 1, 'next letter progresses to the Forest room');
-  await tapKey('2'); await tapKey('Enter'); await tapKey('e'); await sleep(60);
-  assert.equal(await chrome.evaluate('__POSTMARK__.focus'), 1, 'keyboard changes the preview target');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.forest'), 'root-left', 'preview keeps the original bridge intact');
-  await capture('desktop-forest-preview');
-  await tapKey('Enter'); await click('#undo');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.forest'), 'root-left', 'undo restores the original Forest bridge');
-  await chrome.evaluate('__POSTMARK__.startRoom(2)'); await tapKey('3'); await sleep(60); await capture('desktop-sky-preview');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.gravityAt(500,350)'), 1, 'gravity preview has no physical effect');
+  async function fullHop() { await settle(); await key(' '); await sleep(850); await key(' ',false); await settle(); }
+  async function alignTo(x) {
+    // Release momentum and aim optional vertical routes with real key presses.
+    await sleep(120);
+    for(let i=0;i<12;i++) {
+      const delta=x-await ev(g+'.player.x'); if(Math.abs(delta)<=9)return;
+      const direction=delta>0?'d':'a';await key(direction);await sleep(Math.max(16,Math.min(85,Math.abs(delta)/245*1000)));await key(direction,false);await sleep(120);
+    }
+    assert.ok(Math.abs(await ev(g+'.player.x')-x)<=9,'courier aligns with optional route');
+  }
+  async function place(type, next=false) { await tap(String(['ocean','forest','sky'].indexOf(type)+1)); if(next)await tap('e'); await tap('Enter'); }
+  async function delivered(index) {
+    await waitFor(()=>ev('__POSTMARK__.mode === "letter"'),'letter '+(index+1)+' opens');
+    const result=await ev('({room:'+ (index+1) +',delivered:'+g+'.delivered,falls:'+g+'.deaths,memories:'+g+'.collected.size})');
+    assert.equal(result.falls,0,'real control route does not fall'); assert.equal(result.delivered,true);
+    assert.equal(result.memories,3,'optional movement route collects every memory'); await sleep(300);
+    outcomes.push(result); await capture('production-letter-'+(index+1)); console.log('Completed real control route '+(index+1)+' with '+result.memories+'/3 memories');
+    await click('#next');
+  }
 
-  // Run the authored movement solutions inside the browser's actual ES modules.
-  // Real controls were checked above; these verify packaged simulation parity.
-  const outcomes = await chrome.evaluate(`(async () => {
-    const { Game } = await import('./src/engine.js');
-    const tick=(g,n=1,input={})=>{for(let i=0;i<n&&!g.delivered;i++)g.step(input)};
-    const right=(g,x,jump=false)=>{for(let i=0;i<500&&g.player.x<x&&!g.delivered;i++)g.step({right:true,jump});if(g.player.x<x&&!g.delivered)throw Error('Route stopped at '+g.player.x)};
-    const land=g=>{for(let i=0;i<180;i++){g.step();if(g.player.grounded||g.delivered)return;}throw Error('No landing')};
-    const solutions=[
-      g=>{tick(g,25);right(g,310);right(g,480,true);land(g);g.place('ocean','tide');tick(g,240);right(g,555);right(g,750,true);land(g);right(g,935)},
-      g=>{g.place('forest','root-left');tick(g,25);right(g,238);right(g,385,true);land(g);right(g,405);right(g,498,true);land(g);g.place('forest','root-right');right(g,645,true);land(g);right(g,703);right(g,864,true);land(g);right(g,953)},
-      g=>{g.place('sky','updraft');tick(g,25);right(g,957);land(g);tick(g,90)},
-      g=>{tick(g,25);right(g,220);right(g,404,true);land(g);g.place('ocean','home-tide');tick(g,210);right(g,430);right(g,599,true);land(g);g.place('forest','home-root');right(g,706,true);land(g);g.place('sky','home-sky');right(g,990);land(g);tick(g,90)}
-    ];
-    return solutions.map((solve,i)=>{const g=new Game(i);solve(g);return {room:i+1,delivered:g.delivered,falls:g.deaths}})
-  })()`);
-  assert.ok(outcomes.every(o => o.delivered && o.falls === 0));
-  await chrome.evaluate("__POSTMARK__.startRoom(3); __POSTMARK__.select('ocean'); __POSTMARK__.placeAt(0); __POSTMARK__.select('forest'); __POSTMARK__.placeAt(1); __POSTMARK__.select('sky'); __POSTMARK__.placeAt(2)");
-  await sleep(130); await capture('desktop-final-room');
-  await chrome.evaluate("__POSTMARK__.game.player.x = 990; __POSTMARK__.game.player.y = 155");
-  await waitFor(() => chrome.evaluate('__POSTMARK__.mode === "letter"'), 'ending presentation');
-  assert.equal(await chrome.evaluate('document.querySelector("#delivery-title").textContent'), 'You found your way home.'); await capture('desktop-ending');
-  await click('#next'); assert.equal(await chrome.evaluate('__POSTMARK__.game.index'), 0);
+  await chrome.call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
+  await chrome.call('Page.addScriptToEvaluateOnNewDocument',{source:'try {localStorage.clear()} catch {}'});
+  await load(); await capture('production-title'); await click('#start');
+  assert.equal(await ev('document.activeElement.id'),'game');
+  await click('#sound'); assert.equal(await ev('document.querySelector("#sound").getAttribute("aria-pressed")'),'true'); await click('#sound');
+  await click('#fullscreen'); assert.equal(await ev('!!document.fullscreenElement'),true,'native fullscreen works'); await click('#fullscreen');
+  await tap('1'); await capture('production-preview'); assert.equal(await ev(g+'.placements.ocean'),null);
+  await tap('Enter'); await tap('Backspace'); await tap('z'); assert.equal(await ev(g+'.placements.ocean'),'tide'); await click('#undo'); assert.equal(await ev(g+'.placements.ocean'),null);
+  await key('d'); await tap('Escape'); const paused=await ev(g+'.time'); await sleep(150); assert.equal(await ev(g+'.time'),paused);
+  assert.equal(await ev('document.activeElement.id'),'resume'); await key('d',false); await tap('Enter'); assert.equal(await ev('document.querySelector("#pause-dialog").open'),false);
+  assert.equal(await ev('__POSTMARK__.input.right'),false);
+  await click('#help'); const helpTime=await ev(g+'.time'); await sleep(100); assert.equal(await ev(g+'.time'),helpTime); await tap('Escape');
+  await tap('r'); await settle();
+  // Real drag placement from the stamp tray to the world.
+  const from=await center('[data-stamp="ocean"]');
+  await chrome.call('Input.dispatchMouseEvent',{type:'mousePressed',...from,button:'left',clickCount:1});
+  await sleep(50); const to=await world(520,225);
+  await chrome.call('Input.dispatchMouseEvent',{type:'mouseMoved',...to,button:'left',buttons:1});
+  await chrome.call('Input.dispatchMouseEvent',{type:'mouseReleased',...to,button:'left',clickCount:1}); await sleep(60);
+  assert.equal(await ev(g+'.placements.ocean'),'tide'); await tap('r'); await settle();
 
-  await chrome.call('Emulation.setDeviceMetricsOverride', { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
-  await sleep(100);
-  assert.ok(await chrome.evaluate('document.querySelector(".desk-footer").getBoundingClientRect().bottom <= innerHeight'), 'laptop keeps the controls and tray on screen');
-  await capture('laptop-room');
+  // Exercise a tide vault chained into an actual fold dash.
+  await moveTo(310); await moveTo(480,true); await settle(); await place('ocean'); await tap('f');
+  assert.ok(await ev(g+'.player.vy') < -450,'Tide vault launches the courier'); await tap('Shift');
+  assert.ok(await ev(g+'.player.dashTime')>0,'short key press queues a dash'); await capture('production-tide-combo');
+  await tap('r'); await settle();
 
-  await chrome.call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await chrome.call('Emulation.setTouchEmulationEnabled', { enabled: true });
-  await chrome.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await chrome.call('Page.navigate', { url: `${base}/?test=1` }); await waitFor(() => chrome.evaluate('!!window.__POSTMARK__'), 'mobile load'); await sleep(150); await capture('mobile-title');
-  assert.equal(await chrome.evaluate('document.documentElement.scrollWidth <= innerWidth'), true, 'mobile has no horizontal overflow');
-  await click('#start'); assert.equal(await chrome.evaluate('__POSTMARK__.renderer.reducedMotion'), true);
-  const touch = await chrome.evaluate(`(() => {const r=document.querySelector('[data-control="right"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,id:1}})()`);
-  const mobileX = await chrome.evaluate('__POSTMARK__.game.player.x');
-  await chrome.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touch] }); await sleep(220); await chrome.call('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  assert.ok(await chrome.evaluate('__POSTMARK__.game.player.x') > mobileX + 20, 'touch moves courier');
-  await click('[data-stamp="ocean"]'); await click('#game');
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide');
-  await click('#undo'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null, 'mobile undo restores an empty frame');
-  await click('#pause'); const mobilePauseTime = await chrome.evaluate('__POSTMARK__.game.time'); await sleep(100);
-  assert.equal(await chrome.evaluate('__POSTMARK__.game.time'), mobilePauseTime); await capture('mobile-pause');
-  await click('#resume'); assert.equal(await chrome.evaluate('document.querySelector("#pause-dialog").open'), false);
-  await capture('mobile-room');
-  await chrome.evaluate('__POSTMARK__.startRoom(3); __POSTMARK__.game.player.x=990; __POSTMARK__.game.player.y=155');
-  await waitFor(() => chrome.evaluate('__POSTMARK__.mode === "letter"'), 'mobile ending');
-  assert.equal(await chrome.evaluate('(() => {const b=document.querySelector("#next").getBoundingClientRect(),s=document.querySelector(".stage-wrap").getBoundingClientRect();return b.bottom<=s.bottom && b.top>=s.top})()'), true, 'mobile ending action fits inside the scene');
-  await capture('mobile-ending');
-  await chrome.call('Emulation.setDeviceMetricsOverride', { width: 320, height: 740, deviceScaleFactor: 1, mobile: true });
-  await chrome.call('Page.navigate', { url: `${base}/?test=1` }); await waitFor(() => chrome.evaluate('!!window.__POSTMARK__'), 'narrow mobile title');
-  assert.equal(await chrome.evaluate('document.documentElement.scrollWidth <= innerWidth'), true, '320px screen has no horizontal overflow');
-  assert.equal(await chrome.evaluate('(() => {const b=document.querySelector("#start").getBoundingClientRect(),s=document.querySelector(".stage-wrap").getBoundingClientRect();return b.bottom<=s.bottom && b.top>=s.top})()'), true, 'narrow mobile start action fits');
-  await capture('narrow-mobile-title');
-  await click('#start');
-  assert.equal(await chrome.evaluate('document.documentElement.scrollWidth <= innerWidth'), true, '320px gameplay has no horizontal overflow');
-  assert.equal(await chrome.evaluate('(() => {const a=document.querySelector("#room-actions").getBoundingClientRect(),f=document.querySelector(".game-frame").getBoundingClientRect();return a.right<=f.right && a.left>=f.left})()'), true, 'narrow mobile room actions fit');
-  await capture('narrow-mobile-room');
-  await chrome.call('Page.navigate', { url: `${base}/?test=1` }); await waitFor(() => chrome.evaluate('!!window.__POSTMARK__'), 'reload');
-  assert.equal(chrome.errors.length, 0, chrome.errors.join('\n'));
-  const summary = { passed: true, rooms: outcomes, checks: ['packaged build loads', 'local server protects secret files', 'keyboard movement and stamp controls', 'effect previews preserve physics', 'keyboard and button undo', 'pause and resume clear held input', 'sound toggle', 'pointer drag placement', 'help pauses gameplay', 'restart clears effects', 'first delivery through actual keyboard controls', 'four complete puzzle routes', 'ending and replay', 'laptop keeps tray in viewport', 'mobile layout, touch movement, undo and pause', 'mobile ending and 320px gameplay actions fit', 'reduced motion', 'no runtime exceptions'], screenshots: ['desktop-title', 'desktop-ocean-preview', 'desktop-ocean', 'desktop-forest-preview', 'desktop-sky-preview', 'desktop-first-delivery', 'desktop-final-room', 'desktop-ending', 'laptop-room', 'mobile-title', 'mobile-pause', 'mobile-room', 'mobile-ending', 'narrow-mobile-title', 'narrow-mobile-room'] };
-  await writeFile('artifacts/browser-results.json', JSON.stringify(summary, null, 2)); console.log(JSON.stringify(summary, null, 2));
-} finally { if (chrome) await chrome.close(); server.kill(); }
+  // All four deliveries, including optional memory detours, through actual UI.
+  await moveTo(310); await moveTo(480,true); await settle(); await place('ocean');
+  await waitFor(()=>ev(g+'.floats[0].y <= 306.1'),'tide reaches its address');
+  await moveTo(555); await moveTo(750,true); await settle(); await moveTo(800); await alignTo(808); await fullHop(); await moveTo(935);
+  await delivered(0);
+  await place('forest'); await settle(); await moveTo(238); await moveTo(385,true); await settle();
+  assert.equal(await ev(g+'.ability().ready'),true, 'root spring is ready after landing on a root');
+  await tap('f'); assert.ok(await ev(g+'.player.vy') < -450, 'root spring launches through actual controls'); await moveTo(498); await settle(); assert.equal(await ev('!!'+g+'.checkpoint'),true);
+  await place('forest',true); await moveTo(645,true); await settle(); await moveTo(712); await alignTo(719);
+  await tap('f'); await capture('production-root-spring'); await sleep(1200); await settle();
+  await moveTo(864,true); await settle(); await moveTo(953); await delivered(1);
+  await place('sky'); await settle(); await moveTo(630); await settle(); await alignTo(638); await tap('f');
+  assert.equal(await ev(g+'.gravityAt(650,330)'),1,'Sky release temporarily changes gravity'); await capture('production-sky-release');
+  await sleep(1500); await settle(); await moveTo(874); await settle(); await alignTo(884); await fullHop(); await moveTo(953); await delivered(2);
+  await settle(); await moveTo(220); await moveTo(404,true); await settle(); await place('ocean');
+  await waitFor(()=>ev(g+'.floats[0].y <= 350.1'),'last tide reaches the landing');
+  await moveTo(430); await moveTo(599,true); await settle(); await place('forest'); await moveTo(706,true); await settle();
+  await alignTo(724); await tap('f'); await sleep(1200); await settle(); await place('sky'); await moveTo(990); await settle();
+  await waitFor(()=>ev('__POSTMARK__.mode === "letter"'),'victory'); await sleep(300); await capture('production-victory');
+  const last=await ev('({room:4,delivered:'+g+'.delivered,falls:'+g+'.deaths,memories:'+g+'.collected.size})'); outcomes.push(last);
+  assert.equal(last.falls,0); assert.equal(last.memories,3); assert.equal(await ev('document.querySelector("#delivery-title").textContent'),'You found your way home.');
+  assert.ok(await ev('document.querySelector("#delivery-stats").textContent').then(s=>s.includes('4 letters delivered')));
+  assert.ok(await ev('document.querySelector("#delivery-stats").textContent').then(s=>s.includes('12 / 12 memories')));
+  await click('#next'); assert.equal(await ev(g+'.index'),0); assert.equal(await ev(g+'.collected.size'),0);
+
+  const performance=await ev('(() => {__POSTMARK__.startRoom(3); const r=__POSTMARK__.renderer,g=__POSTMARK__.game; for(const s of g.level.sockets)g.place(s.type,s.id); for(let i=0;i<20;i++)r.burst(550,300,"gold",80); const peakParticles=r.particles.length,times=[]; for(let i=0;i<120;i++){const t=performance.now();r.draw(g,{elapsed:1/60,alpha:1});times.push(performance.now()-t)} times.sort((a,b)=>a-b);return {meanMs:times.reduce((a,b)=>a+b,0)/times.length,p95Ms:times[114],maxMs:times.at(-1),peakParticles,particles:r.particles.length,limit:240}})()');
+  assert.ok(performance.p95Ms<30,'software-rendered stress frame stays bounded'); assert.ok(performance.particles<=240);
+  console.log('Render stress: '+JSON.stringify(performance));
+  await ev('__POSTMARK__.startRoom(0)');
+  const frameTiming=await ev('(async () => {const times=[];let prior;for(let i=0;i<91;i++){const t=await new Promise(requestAnimationFrame);if(prior!==undefined)times.push(t-prior);prior=t}times.sort((a,b)=>a-b);return {frames:times.length,medianMs:times[45],p95Ms:times[85],maxMs:times.at(-1)}})()');
+  for(const viewport of [{width:1366,height:768,mobile:false,name:'laptop'},{width:2560,height:1080,mobile:false,name:'ultrawide'}]){
+    await chrome.call('Emulation.setDeviceMetricsOverride',{...viewport,deviceScaleFactor:1});await sleep(100);
+    assert.equal(await ev('document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight'),true,'viewport has no overflow');
+    await capture('production-'+viewport.name);
+  }
+  await chrome.call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true});
+  await chrome.call('Emulation.setTouchEmulationEnabled',{enabled:true});
+  await chrome.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  await load(); await capture('production-mobile-title'); await click('#start');
+  assert.equal(await ev('__POSTMARK__.renderer.reducedMotion'),true);
+  const right=await center('[data-control="right"]'),jump=await center('[data-control="jump"]');
+  const before=await ev(g+'.player.x');
+  await chrome.call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...right,id:1},{...jump,id:2}]});await sleep(220);
+  await chrome.call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.ok(await ev(g+'.player.x')>before+20); assert.equal(await ev('__POSTMARK__.input.jump'),false);
+  await click('[data-stamp="ocean"]'); await sleep(60); assert.equal(await ev('__POSTMARK__.renderer.overview'),true);
+  await clickAt(await world(520,225)); assert.equal(await ev(g+'.placements.ocean'),'tide'); await click('#undo');
+  assert.equal(await ev(g+'.placements.ocean'),null);
+  await click('#dash-control'); await sleep(50); assert.equal(await ev('__POSTMARK__.renderer.shake'),0,'reduced motion never shakes');
+  await click('#pause'); const mobileTime=await ev(g+'.time');await sleep(100);assert.equal(await ev(g+'.time'),mobileTime);await capture('production-mobile-pause');await click('#resume');
+  await capture('production-mobile-room');
+  for(const viewport of [{width:320,height:740,name:'narrow'},{width:844,height:390,name:'landscape'},{width:768,height:1024,name:'tablet'}]){
+    await chrome.call('Emulation.setDeviceMetricsOverride',{...viewport,deviceScaleFactor:1,mobile:true});await sleep(120);
+    assert.equal(await ev('document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight'),true,viewport.name+' fits viewport');
+    const visibleCourier=await ev('(() => {const r=__POSTMARK__.renderer,p=__POSTMARK__.game.player,s=r.worldToScreen(p.x+12,p.y+16);return s.x>=0&&s.x<=r.width&&s.y>=0&&s.y<=r.height})()');
+    assert.equal(visibleCourier,true,'courier remains visible after '+viewport.name+' resize');
+    await capture('production-mobile-'+viewport.name);
+    // A UI fixture checks the ending's scroll access at each small viewport.
+    await ev('__POSTMARK__.startRoom(3);Object.assign(__POSTMARK__.game.player,{x:990,y:146,vy:0})');
+    await waitFor(()=>ev('__POSTMARK__.mode === "letter"'),'mobile ending'); await sleep(100);
+    await ev('document.querySelector("#delivery").scrollTop=0'); await capture('production-mobile-'+viewport.name+'-ending');
+    await ev('document.querySelector("#next").scrollIntoView({block:"nearest"})');
+    assert.equal(await ev('(() => {const b=document.querySelector("#next").getBoundingClientRect(),r=document.querySelector("#delivery").getBoundingClientRect();return b.top>=r.top&&b.bottom<=r.bottom})()'),true,'replay remains reachable');
+    await click('#next'); assert.equal(await ev(g+'.index'),0); await settle();
+  }
+  // Storage failure must not break the game.
+  const storageScript=await chrome.call('Page.addScriptToEvaluateOnNewDocument',{source:'Object.defineProperty(window,"localStorage",{get(){throw new Error("Storage unavailable")}})'});
+  await load();await click('#start');assert.equal(await ev('__POSTMARK__.mode'),'playing');await chrome.call('Page.removeScriptToEvaluateOnNewDocument',{identifier:storageScript.identifier});
+
+  // Fault injection in the browser: the game starts before artwork can finish.
+  await chrome.call('Emulation.setDeviceMetricsOverride',{width:1366,height:768,deviceScaleFactor:1,mobile:false});
+  const fixture=await ev('__POSTMARK__.renderer.images.ocean.toDataURL("image/png").split(",")[1]');
+  for(const fault of ['rate-limit','server-error','malformed','timeout','corrupt-image','valid-image']){
+    await chrome.call('Fetch.enable',{patterns:[{urlPattern:'*/assets/manifest.json'},{urlPattern:'*/assets/ocean.png'}]});
+    const start=chrome.events.length;await chrome.call('Page.navigate',{url:base+'/?test=1'});
+    await waitFor(()=>chrome.events.slice(start).some(e=>e.method==='Fetch.requestPaused'&&e.params.request.url.endsWith('manifest.json')),'intercept manifest');
+    const pausedRequest=chrome.events.slice(start).find(e=>e.method==='Fetch.requestPaused'&&e.params.request.url.endsWith('manifest.json')).params.requestId;
+    if(fault!=='timeout'){
+      const manifest=fault==='corrupt-image'||fault==='valid-image'?JSON.stringify({assets:[{id:'ocean',file:'ocean.png'}]}):fault==='malformed'?'not-json':'{}';
+      await chrome.call('Fetch.fulfillRequest',{requestId:pausedRequest,responseCode:fault==='rate-limit'?429:fault==='server-error'?503:200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(manifest).toString('base64')});
+    }
+    await waitFor(()=>ev('!!window.__POSTMARK__'),'fallback game starts');await click('#start');await key('d');await sleep(160);await key('d',false);
+    assert.ok(await ev(g+'.player.x')>125,'art failure never blocks movement');
+    if(fault==='corrupt-image'||fault==='valid-image'){
+      await waitFor(()=>chrome.events.slice(start).some(e=>e.method==='Fetch.requestPaused'&&e.params.request.url.endsWith('ocean.png')),'intercept image');
+      const id=chrome.events.slice(start).find(e=>e.method==='Fetch.requestPaused'&&e.params.request.url.endsWith('ocean.png')).params.requestId;
+      await chrome.call('Fetch.fulfillRequest',{requestId:id,responseCode:200,responseHeaders:[{name:'Content-Type',value:'image/png'}],body:fault==='valid-image'?fixture:Buffer.from('bad png').toString('base64')});
+      await sleep(100);
+      assert.equal(await ev('__POSTMARK__.renderer.images.ocean instanceof HTMLImageElement'),fault==='valid-image');
+    }
+    if(fault==='timeout'){await sleep(2700);assert.equal(await ev('__POSTMARK__.renderer.images.ocean instanceof HTMLCanvasElement'),true);await capture('production-art-fallback');}
+    await chrome.call('Fetch.disable');faults.push(fault);
+  }
+  assert.equal(chrome.errors.length,0,chrome.errors.join('\n'));
+  const summary={passed:true,realControlRoutes:outcomes,artFaults:faults,performance,frameTiming,screenshots:shots,checks:['all four deliveries through real keyboard controls','stamp dragging, preview, undo, pause and native fullscreen','tide vault, root spring and sky release','optional memory detours and checkpoint activation','victory and replay','desktop, laptop, ultrawide, phone, landscape and tablet','multi-touch and reduced motion','storage unavailable','API/art errors and bounded fallback','no runtime exceptions']};
+  await writeFile('artifacts/browser-results.json',JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));
+}catch(error){
+  if(chrome){console.log('Failure state: '+JSON.stringify(await chrome.evaluate('window.__POSTMARK__ ? ({player:__POSTMARK__.game.player,ability:__POSTMARK__.game.ability(),input:__POSTMARK__.input,mode:__POSTMARK__.mode,falls:__POSTMARK__.game.deaths,memories:[...__POSTMARK__.game.collected]}) : null'))); const shot=await chrome.call('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/production-failure.png',Buffer.from(shot.data,'base64'));}
+  throw error;
+}finally{if(chrome)await chrome.close();server.kill()}
