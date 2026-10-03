@@ -2,24 +2,32 @@
 
 ## Scene and mood
 
-A player sits at an impossible post-office desk during the quiet night shift. Cool blue ink, folded correspondence, muted print textures, and small vivid landscape stamps make the scene tactile; the last letter makes it personal.
+An impossible post office during the night shift. Cool blue ink, folded correspondence, printed textures, small vivid landscape stamps, and a warm light at the last address make the journey tactile and personal.
 
-## Color
+## Color and type
 
-CSS uses OKLCH tokens. The primary blue is anchored at hue 230. The desk is a dark tinted blue surface because it represents a physical night desk. Pale neutral correspondence provides strong contrast inside the game; Ocean, Forest, and Sky colors communicate different physics. Gold marks actionable selection and the goal envelope.
+CSS uses OKLCH tokens, with the postal blue anchored at hue 230. The tinted desk gives pale paper platforms and the courier contrast. Cyan Ocean, mint Forest, violet Sky, and gold memories communicate distinct physical interactions. Solid geometry remains clear inside illustrated world regions.
 
-## Typography
-
-Georgia gives letters and the title the feel of printed correspondence. Trebuchet MS / Segoe UI carries controls and instructions. Courier New is reserved for postage annotations and keyboard keys. System fonts keep the downloadable game self-contained.
+Georgia gives the title and letters a printed character. Trebuchet MS / Segoe UI carries controls; Courier New carries postal annotations. Local system fonts keep the game self-contained.
 
 ## Composition
 
-One framed Canvas room, a restrained room header, an instructional note, and a stamp tray. The first screen is a letter laid across the playable scene. No marketing sections or decorative dashboard panels. Four single-screen puzzles use fixed authored geometry so generated artwork cannot alter collision or solvability.
+One viewport-filling Canvas stage between a compact postal HUD and a functional stamp/ability tray. Desktop shows the authored room; portrait and short touch landscapes follow the courier at a useful scale. Selecting a stamp opens a whole-room overview. Controls convert through the same camera transform as rendering.
 
-## Motion and interaction
+The opening appears over the room. Delivery appears as a readable letter with restored memories and safe returns. Overflowing title/ending cards scroll on short screens. Native fullscreen is optional; ordinary viewport play remains supported.
 
-Short stamp-lift feedback, a paper confetti burst on placement, small envelope motion, water ripples, and a gravity flip. Reduced motion disables cosmetic movement while preserving necessary gameplay physics. Select-and-click and keyboard placement are alternatives to dragging. Native controls support focus navigation; help is a native modal dialog that pauses the game.
+## Motion and feedback
+
+Fixed-step physics with render interpolation, variable-height jumps, a buffered jump and ledge grace period, short horizontal dash, and contextual world pulses. Paper courier squash and stretch, afterimages, seeded bursts, expanding rings, gravity cues, water ripples, root growth, and restrained impact shake give actions readable consequences.
+
+Room entry fades briefly; delivery has a short paper arrival. Paused dialogs freeze gameplay and clear held input. Reduced motion disables particles, trails, shake, cosmetic oscillation, and transitions while preserving gameplay and static feedback. Cached landscapes/room scenes and bounded effect pools keep drawing inexpensive.
+
+## Controls and HUD
+
+Named stamp thumbnails, borrowed-state labels, contextual ability name/readiness, dash charge/cooldown, optional memory count, letter progress, undo, reclaim, map, help, pause, sound, and fullscreen. Touch movement supports simultaneous fingers; touch abilities have explicit buttons. Native dialogs and focus styles preserve keyboard navigation.
 
 ## Art provenance
 
-Landscape slots accept local DreamLayer PNGs listed in assets/manifest.json. The procedural fallback is original code artwork and is never described as generated. Only real DreamLayer outputs may be marked as such. The paper courier, structural platforms, physics effects, UI, and synthesized sound are authored in code.
+Landscape slots accept only local Ocean, Forest, and Sky PNGs from assets/manifest.json. They load with bounded deadlines over immediate original procedural artwork. Failed enhancement never creates a loading screen.
+
+Fallback art is authored code and is never described as DreamLayer-generated. Only actual outputs may be marked as generated. Courier, geometry, roots, water effects, paper textures, UI, particles, and sound remain code-authored regardless of landscape source.

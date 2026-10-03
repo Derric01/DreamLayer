@@ -2,7 +2,7 @@ import { mkdir, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 const manifest = JSON.parse(await readFile('assets/manifest.json', 'utf8'));
-const files = ['index.html', 'styles.css', 'assets/favicon.svg', 'assets/manifest.json', 'src/main.js', 'src/engine.js', 'src/levels.js', 'src/renderer.js', 'src/audio.js'];
+const files = ['index.html', 'styles.css', 'assets/favicon.svg', 'assets/manifest.json', 'src/main.js', 'src/engine.js', 'src/levels.js', 'src/renderer.js', 'src/audio.js', 'src/art.js'];
 for (const asset of manifest.assets) {
   if (!/^[a-z0-9-]+\.png$/.test(asset.file)) throw new Error('Asset file must be a local PNG filename');
   files.push(`assets/${asset.file}`);

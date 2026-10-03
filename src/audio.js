@@ -19,6 +19,11 @@ export class Audio {
     if (event === 'reclaim') this.tone(280, .13, 0, .025, 'triangle');
     if (event === 'gravity') { this.tone(330, .17, 0, .025); this.tone(495, .22, .06, .025); }
     if (event === 'fall') this.tone(160, .2, 0, .025, 'triangle');
+    if (event === 'dash') { this.tone(260, .08, 0, .035, 'sawtooth'); this.tone(520, .12, .03, .025); }
+    if (event === 'pulse') [220, 440, 660].forEach((f, i) => this.tone(f, .22, i * .04, .035, 'triangle'));
+    if (event === 'land') this.tone(100, .08, 0, .025, 'triangle');
+    if (event === 'memory') [784, 988, 1175].forEach((f, i) => this.tone(f, .25, i * .065, .02));
+    if (event === 'checkpoint') [330, 440, 660].forEach((f, i) => this.tone(f, .35, i * .09, .025));
     if (event === 'delivered') [392, 494, 587, 784].forEach((f, i) => this.tone(f, .6, i * .13, .035));
   }
 }
