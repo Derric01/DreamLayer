@@ -120,6 +120,8 @@ export class Renderer {
     for (const platform of game.level.platforms) this.platform(platform);
     for (const platform of game.floats) this.crate(platform);
     for (const socket of game.level.sockets) if (socket.bridge && game.active('forest', socket)) this.root(socket.bridge);
+    const target = game.level.sockets[focus];
+    if (target && selected === target.type && !game.active(selected, target)) this.effectPreview(game, target);
     if (game.index === 3) this.home(979, 118);
     this.envelope(game.level.goal.x, game.level.goal.y, game.delivered);
     this.courier(game.player, preview);
@@ -163,6 +165,32 @@ export class Renderer {
     } else {
       ctx.strokeStyle = selected === socket.type ? `${C[socket.type]}b0` : '#899fa15a'; ctx.lineWidth = 1; ctx.setLineDash([5, 7]); ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.setLineDash([]);
     }
+    ctx.restore();
+  }
+
+  effectPreview(game, socket) {
+    const ctx = this.ctx, r = socket.field;
+    ctx.save(); ctx.globalAlpha = .12;
+    landscape(ctx, socket.type, r.x, r.y, r.w, r.h, this.images[socket.type]);
+    ctx.globalAlpha = .8; ctx.strokeStyle = C[socket.type]; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+    let x = r.x + r.w / 2, y = r.y + 21, label = 'PREVIEW · GRAVITY ↑';
+    if (socket.float) {
+      const p = socket.float, floating = game.floats.find(f => f.id === socket.id);
+      ctx.strokeRect(p.x, p.targetY, p.w, p.h);
+      ctx.beginPath(); ctx.moveTo(p.x + p.w / 2, floating.y - 5); ctx.lineTo(p.x + p.w / 2, p.targetY + p.h + 5); ctx.stroke();
+      x = p.x + p.w / 2; y = p.targetY - 11; label = 'PREVIEW · CRATE RISES';
+    } else if (socket.bridge) {
+      const p = socket.bridge;
+      ctx.strokeRect(p.x, p.y, p.w, p.h);
+      x = p.x + p.w / 2; y = p.y - 11; label = 'PREVIEW · BRIDGE GROWS';
+    } else {
+      ctx.setLineDash([]); ctx.font = '22px Georgia'; ctx.fillStyle = C.sky; ctx.textAlign = 'center';
+      for (let xx = r.x + 30; xx < r.x + r.w; xx += 63) for (let yy = r.y + 65; yy < r.y + r.h; yy += 110) ctx.fillText('↑', xx, yy);
+    }
+    ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.font = '11px "Courier New", monospace'; ctx.textAlign = 'center';
+    const width = ctx.measureText(label).width + 12;
+    ctx.fillStyle = '#e5e9e7'; ctx.fillRect(x - width / 2, y - 13, width, 18);
+    ctx.fillStyle = C.ink; ctx.fillText(label, x, y);
     ctx.restore();
   }
 

@@ -18,10 +18,12 @@ Open http://127.0.0.1:4173. On Windows PowerShell with script execution restrict
 - Place: click its dotted frame, or drag it from the tray.
 - Keyboard frames: Q / E select; Enter places.
 - Reclaim: the tray button, Backspace, or right-click in the room.
+- Undo the last stamp move: the tray button or Z.
+- Pause / resume: Escape or the Pause button.
 - Restart room: R.
 - Touch movement buttons appear on small screens or devices with coarse pointers.
 
-Ocean raises a floating crate. Forest creates a bridge; moving it removes the previous bridge. Sky reverses gravity only inside its marked region. Help pauses the game. Falling returns you to the room start and resets Ocean so its lift remains accessible. Progress between letters is saved locally when the browser permits storage. Sound is optional and starts after an explicit interaction.
+Ocean raises a floating crate. Forest creates a bridge; moving it removes the previous bridge. Sky reverses gravity only inside its marked region. Selecting a stamp previews its effect before placement; Q / E or hovering a matching frame changes the preview. Undo restores earlier stamp placements without rewinding the courier. Falling clears undo history, returns you to the room start, and resets Ocean so its lift remains accessible. Both Help and Pause freeze the simulation and clear held movement. Progress between letters is saved locally when the browser permits storage. Sound is optional and starts after an explicit interaction.
 
 ## DreamLayer art workflow
 
@@ -44,7 +46,7 @@ npm run build
 npm run test:browser
 ```
 
-Simulation tests exercise the complete routes through all four puzzles using real movement, including stamp reuse, gravity boundaries, and recovery. Syntax checks cover the game and Node tooling. The browser smoke test loads the packaged build in headless Chrome or Edge, checks controls, pointer placement, help, replay, mobile layout, and reduced motion, and saves screenshots to ignored `artifacts/`.
+Simulation tests exercise the complete routes through all four puzzles using real movement, including stamp reuse, undo, gravity boundaries, and recovery. Syntax checks cover the game and Node tooling. The browser smoke test loads the packaged build in headless Chrome or Edge, checks controls, effect previews, undo, pointer placement, pause/resume, help, replay, mobile layout, and reduced motion, and saves screenshots to ignored `artifacts/`.
 
 The Windows browser harness additionally requires Python and its `websocket-client` package. Set `POSTMARK_CHROME` or `POSTMARK_PYTHON` if your binaries are in different locations. Browser tooling is separate from the game and never packaged.
 

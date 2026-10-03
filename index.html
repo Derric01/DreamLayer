@@ -23,7 +23,7 @@
     <section class="game-frame" aria-label="POSTMARK game">
       <div class="room-header">
         <div><span id="room-number" class="room-number">Night shift</span><h1 id="room-title">Some places need a little postage.</h1></div>
-        <button id="restart" class="quiet-button" hidden>Restart room <span aria-hidden="true">↺</span></button>
+        <div id="room-actions" class="room-actions" hidden><button id="pause" class="quiet-button" aria-label="Pause game, Escape">Pause</button><button id="restart" class="quiet-button" aria-label="Restart room, R">Restart <span aria-hidden="true">↺</span></button></div>
       </div>
       <div class="stage-wrap">
         <canvas id="game" width="1100" height="620" tabindex="0" aria-label="Puzzle room. Move with A and D or arrow keys. Jump with Space. Select a stamp with 1, 2, or 3, then select a socket with Q and E and place with Enter."></canvas>
@@ -57,7 +57,7 @@
         <button class="stamp-button forest" data-stamp="forest" draggable="false" aria-pressed="false" aria-label="Forest stamp, key 2. Grows a bridge."><span class="stamp-art" data-art="forest"></span><span class="stamp-caption"><span><b>Forest</b><small>Grow a bridge</small></span><kbd>2</kbd></span></button>
         <button class="stamp-button sky" data-stamp="sky" draggable="false" aria-pressed="false" aria-label="Sky stamp, key 3. Reverses gravity."><span class="stamp-art" data-art="sky"></span><span class="stamp-caption"><span><b>Sky</b><small>Turn gravity over</small></span><kbd>3</kbd></span></button>
       </div>
-      <button id="reclaim" class="reclaim-button" disabled><span aria-hidden="true">↶</span> Reclaim stamp</button>
+      <div class="tray-actions"><button id="undo" class="reclaim-button" aria-label="Undo last stamp move, Z" disabled><span aria-hidden="true">↶</span>Undo stamp</button><button id="reclaim" class="reclaim-button" disabled><span aria-hidden="true">×</span>Reclaim stamp</button></div>
     </section>
 
     <div class="touch-controls" aria-label="Movement controls">
@@ -73,9 +73,15 @@
     <h2>A little world goes a long way.</h2>
     <p>Walk your paper courier to the glowing letter. Select or drag a stamp onto a dotted frame to borrow its world.</p>
     <dl><div><dt>Ocean</dt><dd>Raises the wooden crate. Step onto it before raising the tide.</dd></div><div><dt>Forest</dt><dd>Grows a bridge. Move the same stamp to another frame when you reach solid ground.</dd></div><div><dt>Sky</dt><dd>Reverses gravity inside the blue frame. Walk under a ceiling, then leave the frame to fall normally.</dd></div></dl>
-    <p>Each stamp exists in one place. Moving or reclaiming it removes the old effect. There is no timer and no penalty for falling.</p>
-    <p class="keyboard-help">Keyboard: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> select a stamp, <kbd>Q</kbd> / <kbd>E</kbd> choose a frame, <kbd>Enter</kbd> place, <kbd>Backspace</kbd> reclaim. <kbd>A</kbd> / <kbd>D</kbd> move, <kbd>Space</kbd> jump, <kbd>R</kbd> restart.</p>
+    <p>Select a stamp to preview its effect. Each stamp exists in one place. Moving or reclaiming it removes the old effect. Undo restores the previous stamp placement; your courier keeps their position. Falling clears undo history. There is no timer and no penalty for falling.</p>
+    <p class="keyboard-help">Keyboard: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> select a stamp, <kbd>Q</kbd> / <kbd>E</kbd> choose a frame, <kbd>Enter</kbd> place, <kbd>Backspace</kbd> reclaim, <kbd>Z</kbd> undo a stamp move. <kbd>A</kbd> / <kbd>D</kbd> move, <kbd>Space</kbd> jump, <kbd>R</kbd> restart, <kbd>Esc</kbd> pause.</p>
     <form method="dialog"><button class="primary-button">Back to the desk</button></form>
+  </dialog>
+  <dialog id="pause-dialog" aria-labelledby="pause-title">
+    <span class="letter-salutation">The letters can wait.</span>
+    <h2 id="pause-title">Take a little breather.</h2>
+    <p>Your place at the desk is safe. Resume whenever you are ready.</p>
+    <form method="dialog"><button id="resume" class="primary-button" autofocus>Resume your shift <span aria-hidden="true">→</span></button></form>
   </dialog>
   <script type="module" src="./src/main.js"></script>
 </body>

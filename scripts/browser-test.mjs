@@ -17,7 +17,12 @@ try {
   await waitFor(() => chrome.evaluate('!!window.__POSTMARK__'), 'game load'); await sleep(120);
   async function capture(name) { const { data } = await chrome.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); await writeFile(`artifacts/${name}.png`, Buffer.from(data, 'base64')); }
   async function click(selector) { const p = await chrome.evaluate(`(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`); await chrome.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...p, button: 'left', clickCount: 1 }); await chrome.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...p, button: 'left', clickCount: 1 }); }
-  async function key(key, down = true, code = key) { await chrome.call('Input.dispatchKeyEvent', { type: down ? 'keyDown' : 'keyUp', key, code }); }
+  async function key(key, down = true, code = key) {
+    const special = { Enter: 13, Escape: 27, Backspace: 8, ' ': 32 };
+    const windowsVirtualKeyCode = special[key] ?? (key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0);
+    const text = down && key === 'Enter' ? '\r' : down && key === ' ' ? ' ' : undefined;
+    await chrome.call('Input.dispatchKeyEvent', { type: down ? 'keyDown' : 'keyUp', key, code, windowsVirtualKeyCode, text });
+  }
   async function tapKey(k) { await key(k); await key(k, false); }
 
   await capture('desktop-title'); await click('#start');
@@ -27,8 +32,22 @@ try {
   await click('#sound'); assert.equal(await chrome.evaluate('document.querySelector("#sound").getAttribute("aria-pressed")'), 'false');
   assert.equal(await chrome.evaluate('document.activeElement.id'), 'game', 'sound toggle returns focus to gameplay');
   await chrome.evaluate('document.querySelector("#game").focus()');
-  await tapKey('1'); await tapKey('Enter'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide');
+  await tapKey('1'); await sleep(60); await capture('desktop-ocean-preview');
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null, 'preview does not place a stamp');
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.floats[0].y'), 540, 'preview does not move the crate');
+  await tapKey('Enter'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide');
   await tapKey('Backspace'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null);
+  await tapKey('z'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide', 'Z undoes a reclaim');
+  await click('#undo'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null, 'undo button restores an empty frame');
+  assert.equal(await chrome.evaluate('document.querySelector("#undo").disabled'), true, 'undo disables when history is empty');
+  await key('d'); await tapKey('Escape');
+  assert.equal(await chrome.evaluate('document.querySelector("#pause-dialog").open'), true, 'Escape opens pause');
+  const pauseTime = await chrome.evaluate('__POSTMARK__.game.time'); await sleep(170);
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.time'), pauseTime, 'pause freezes the simulation');
+  await key('d', false); assert.equal(await chrome.evaluate('document.activeElement.id'), 'resume', 'pause focuses its resume action'); await tapKey('Enter');
+  assert.equal(await chrome.evaluate('document.querySelector("#pause-dialog").open'), false, 'Enter resumes through the focused native button');
+  assert.equal(await chrome.evaluate('document.activeElement.id'), 'game');
+  assert.equal(await chrome.evaluate('__POSTMARK__.input.right'), false, 'pause clears held movement');
   const beforeX = await chrome.evaluate('__POSTMARK__.game.player.x'); await key('d'); await sleep(200); await key('d', false);
   assert.ok(await chrome.evaluate('__POSTMARK__.game.player.x') > beforeX + 20, 'keyboard moves courier');
   await click('#help'); const paused = await chrome.evaluate('__POSTMARK__.game.time'); await sleep(170); assert.equal(await chrome.evaluate('__POSTMARK__.game.time'), paused, 'help pauses simulation');
@@ -61,6 +80,14 @@ try {
   assert.equal(await chrome.evaluate('__POSTMARK__.game.deaths'), 0, 'first delivery succeeds through real controls without falls');
   await capture('desktop-first-delivery'); await click('#next');
   assert.equal(await chrome.evaluate('__POSTMARK__.game.index'), 1, 'next letter progresses to the Forest room');
+  await tapKey('2'); await tapKey('Enter'); await tapKey('e'); await sleep(60);
+  assert.equal(await chrome.evaluate('__POSTMARK__.focus'), 1, 'keyboard changes the preview target');
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.forest'), 'root-left', 'preview keeps the original bridge intact');
+  await capture('desktop-forest-preview');
+  await tapKey('Enter'); await click('#undo');
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.forest'), 'root-left', 'undo restores the original Forest bridge');
+  await chrome.evaluate('__POSTMARK__.startRoom(2)'); await tapKey('3'); await sleep(60); await capture('desktop-sky-preview');
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.gravityAt(500,350)'), 1, 'gravity preview has no physical effect');
 
   // Run the authored movement solutions inside the browser's actual ES modules.
   // Real controls were checked above; these verify packaged simulation parity.
@@ -100,6 +127,12 @@ try {
   const mobileX = await chrome.evaluate('__POSTMARK__.game.player.x');
   await chrome.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touch] }); await sleep(220); await chrome.call('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   assert.ok(await chrome.evaluate('__POSTMARK__.game.player.x') > mobileX + 20, 'touch moves courier');
+  await click('[data-stamp="ocean"]'); await click('#game');
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), 'tide');
+  await click('#undo'); assert.equal(await chrome.evaluate('__POSTMARK__.game.placements.ocean'), null, 'mobile undo restores an empty frame');
+  await click('#pause'); const mobilePauseTime = await chrome.evaluate('__POSTMARK__.game.time'); await sleep(100);
+  assert.equal(await chrome.evaluate('__POSTMARK__.game.time'), mobilePauseTime); await capture('mobile-pause');
+  await click('#resume'); assert.equal(await chrome.evaluate('document.querySelector("#pause-dialog").open'), false);
   await capture('mobile-room');
   await chrome.evaluate('__POSTMARK__.startRoom(3); __POSTMARK__.game.player.x=990; __POSTMARK__.game.player.y=155');
   await waitFor(() => chrome.evaluate('__POSTMARK__.mode === "letter"'), 'mobile ending');
@@ -110,8 +143,12 @@ try {
   assert.equal(await chrome.evaluate('document.documentElement.scrollWidth <= innerWidth'), true, '320px screen has no horizontal overflow');
   assert.equal(await chrome.evaluate('(() => {const b=document.querySelector("#start").getBoundingClientRect(),s=document.querySelector(".stage-wrap").getBoundingClientRect();return b.bottom<=s.bottom && b.top>=s.top})()'), true, 'narrow mobile start action fits');
   await capture('narrow-mobile-title');
+  await click('#start');
+  assert.equal(await chrome.evaluate('document.documentElement.scrollWidth <= innerWidth'), true, '320px gameplay has no horizontal overflow');
+  assert.equal(await chrome.evaluate('(() => {const a=document.querySelector("#room-actions").getBoundingClientRect(),f=document.querySelector(".game-frame").getBoundingClientRect();return a.right<=f.right && a.left>=f.left})()'), true, 'narrow mobile room actions fit');
+  await capture('narrow-mobile-room');
   await chrome.call('Page.navigate', { url: `${base}/?test=1` }); await waitFor(() => chrome.evaluate('!!window.__POSTMARK__'), 'reload');
   assert.equal(chrome.errors.length, 0, chrome.errors.join('\n'));
-  const summary = { passed: true, rooms: outcomes, checks: ['packaged build loads', 'local server protects secret files', 'keyboard movement and stamp controls', 'sound toggle', 'pointer drag placement', 'help pauses gameplay', 'restart clears effects', 'first delivery through actual keyboard controls', 'four complete puzzle routes', 'ending and replay', 'laptop keeps tray in viewport', 'mobile layout and touch movement', 'mobile ending and 320px title actions fit', 'reduced motion', 'no runtime exceptions'], screenshots: ['desktop-title', 'desktop-ocean', 'desktop-first-delivery', 'desktop-final-room', 'desktop-ending', 'laptop-room', 'mobile-title', 'mobile-room', 'mobile-ending', 'narrow-mobile-title'] };
+  const summary = { passed: true, rooms: outcomes, checks: ['packaged build loads', 'local server protects secret files', 'keyboard movement and stamp controls', 'effect previews preserve physics', 'keyboard and button undo', 'pause and resume clear held input', 'sound toggle', 'pointer drag placement', 'help pauses gameplay', 'restart clears effects', 'first delivery through actual keyboard controls', 'four complete puzzle routes', 'ending and replay', 'laptop keeps tray in viewport', 'mobile layout, touch movement, undo and pause', 'mobile ending and 320px gameplay actions fit', 'reduced motion', 'no runtime exceptions'], screenshots: ['desktop-title', 'desktop-ocean-preview', 'desktop-ocean', 'desktop-forest-preview', 'desktop-sky-preview', 'desktop-first-delivery', 'desktop-final-room', 'desktop-ending', 'laptop-room', 'mobile-title', 'mobile-pause', 'mobile-room', 'mobile-ending', 'narrow-mobile-title', 'narrow-mobile-room'] };
   await writeFile('artifacts/browser-results.json', JSON.stringify(summary, null, 2)); console.log(JSON.stringify(summary, null, 2));
 } finally { if (chrome) await chrome.close(); server.kill(); }

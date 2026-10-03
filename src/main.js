@@ -22,7 +22,9 @@ function syncControls() {
     button.setAttribute('aria-label', `${type[0].toUpperCase() + type.slice(1)} stamp, key ${STAMPS.indexOf(type) + 1}. ${game.placements[type] ? 'Placed. Select to move or reclaim.' : button.querySelector('small').textContent + '.'}`);
   });
   $('#reclaim').disabled = mode !== 'playing' || !selected || !game.placements[selected];
-  $('#selection-hint').textContent = selected ? `${selected[0].toUpperCase() + selected.slice(1)} selected. Choose its dotted frame.` : 'Select a stamp, then a dotted frame.';
+  $('#undo').disabled = mode !== 'playing' || !game.canUndo;
+  $('#pause').disabled = mode !== 'playing';
+  $('#selection-hint').textContent = selected ? `${selected[0].toUpperCase() + selected.slice(1)} selected. Preview its effect, then place.` : 'Select a stamp, then a dotted frame.';
 }
 function select(type) {
   if (mode !== 'playing' || !game.level.available.includes(type)) return;
@@ -30,7 +32,8 @@ function select(type) {
 }
 function startRoom(index) {
   clearTimeout(deliveryTimer); game.load(index); mode = 'playing'; selected = null; focus = -1; pointer = null; clearInput();
-  $('#intro').hidden = true; $('#delivery').hidden = true; $('#restart').hidden = false;
+  clearTimeout(toastTimer); $('#toast').classList.remove('visible'); renderer.particles = [];
+  $('#intro').hidden = true; $('#delivery').hidden = true; $('#room-actions').hidden = false;
   $('#room-number').textContent = `Letter ${index + 1} of 4 · ${game.level.subtitle}`;
   $('#room-title').textContent = game.level.title; $('#room-hint').textContent = game.level.hint; $('#delivery-progress').textContent = `${index} / 4 delivered`;
   try { localStorage.setItem('postmark-room', String(index)); } catch {}
@@ -48,7 +51,7 @@ function delivered() {
 }
 function processEvents() {
   for (const event of game.drainEvents()) {
-    audio.play(event.type);
+    audio.play(event.type === 'undo' ? 'reclaim' : event.type);
     if (event.type === 'stamp') { const socket = game.level.sockets.find(s => s.id === event.id); renderer.burst(socket.x, socket.y, event.stamp); }
     if (event.type === 'fall') {
       syncControls();
@@ -68,18 +71,33 @@ function placeAt(index) {
 }
 function point(event) { const r = canvas.getBoundingClientRect(); return { x: (event.clientX - r.left) / r.width * WIDTH, y: (event.clientY - r.top) / r.height * HEIGHT }; }
 function hitSocket(p) { return game.level.sockets.findIndex(s => Math.abs(s.x - p.x) <= 52 && Math.abs(s.y - p.y) <= 59); }
+function matchingFrame(p) {
+  const hit = hitSocket(p);
+  if (hit >= 0) return game.level.sockets[hit].type === selected ? hit : -1;
+  return game.level.sockets.findIndex(s => s.type === selected && p.x >= s.field.x && p.x <= s.field.x + s.field.w && p.y >= s.field.y && p.y <= s.field.y + s.field.h);
+}
+function undoStamp() {
+  if (mode !== 'playing' || !game.undo()) return;
+  syncControls(); toast('Last stamp move undone.'); canvas.focus({ preventScroll: true });
+}
+function pauseGame() {
+  if (mode !== 'playing' || $('#help-dialog').open || $('#pause-dialog').open) return;
+  clearInput(); pointer = null; $('#pause-dialog').showModal();
+}
 
 $('#start').addEventListener('click', () => startRoom(lastRoom));
 $('#next').addEventListener('click', () => startRoom(game.index === 3 ? 0 : game.index + 1));
 $('#restart').addEventListener('click', () => startRoom(game.index));
 $('#reclaim').addEventListener('click', () => { if (selected) game.reclaim(selected); syncControls(); canvas.focus({ preventScroll: true }); });
+$('#undo').addEventListener('click', undoStamp);
+$('#pause').addEventListener('click', pauseGame);
 $('#sound').addEventListener('click', async () => {
   if (audio.enabled) audio.disable(); else if (!await audio.enable()) toast('Sound is unavailable in this browser.');
   $('#sound').textContent = audio.enabled ? 'Sound on' : 'Sound off'; $('#sound').setAttribute('aria-pressed', String(audio.enabled)); $('#sound').setAttribute('aria-label', audio.enabled ? 'Disable sound' : 'Enable sound');
   if (mode === 'playing') canvas.focus({ preventScroll: true });
 });
-$('#help').addEventListener('click', () => { clearInput(); $('#help-dialog').showModal(); });
-$('#help-dialog').addEventListener('close', () => { previousTime = 0; accumulator = 0; if (mode === 'playing') canvas.focus({ preventScroll: true }); });
+$('#help').addEventListener('click', () => { clearInput(); pointer = null; $('#help-dialog').showModal(); });
+for (const dialog of [$('#help-dialog'), $('#pause-dialog')]) dialog.addEventListener('close', () => { previousTime = 0; accumulator = 0; if (mode === 'playing') canvas.focus({ preventScroll: true }); });
 
 document.querySelectorAll('[data-stamp]').forEach(button => {
   let origin = null;
@@ -87,13 +105,14 @@ document.querySelectorAll('[data-stamp]').forEach(button => {
     if (button.disabled || event.button !== 0) return;
     select(button.dataset.stamp); origin = { x: event.clientX, y: event.clientY }; button.setPointerCapture(event.pointerId); pointer = { ...point(event), drag: false };
   });
-  button.addEventListener('pointermove', event => { if (!origin) return; pointer = { ...point(event), drag: Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 9 }; });
+  button.addEventListener('pointermove', event => { if (!origin) return; pointer = { ...point(event), drag: Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 9 }; if (pointer.drag) focus = matchingFrame(pointer); });
   button.addEventListener('pointerup', event => {
     if (!origin) return; if (pointer?.drag) placeAt(hitSocket(point(event))); origin = null; pointer = null; canvas.focus({ preventScroll: true });
   });
   button.addEventListener('pointercancel', () => { origin = null; pointer = null; });
   button.addEventListener('click', () => select(button.dataset.stamp));
 });
+canvas.addEventListener('pointermove', event => { if (mode !== 'playing' || !selected) return; const index = matchingFrame(point(event)); if (index >= 0) focus = index; });
 canvas.addEventListener('pointerdown', event => {
   if (mode !== 'playing' || event.button !== 0) return; canvas.focus({ preventScroll: true }); const p = point(event), index = hitSocket(p);
   if (index >= 0) { placeAt(index); return; }
@@ -105,13 +124,13 @@ canvas.addEventListener('pointerdown', event => {
 canvas.addEventListener('contextmenu', event => { event.preventDefault(); if (mode === 'playing' && selected) { game.reclaim(selected); syncControls(); } });
 
 window.addEventListener('keydown', event => {
-  if ($('#help-dialog').open) return;
+  if ($('#help-dialog').open || $('#pause-dialog').open) return;
   const key = event.key.toLowerCase(), target = event.target;
   if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) return;
   if (mode !== 'playing') return;
   // Space/Enter on a focused native button keep their expected activation behavior.
   if (target instanceof HTMLButtonElement && (key === ' ' || key === 'enter')) return;
-  const handled = ['a', 'd', 'w', 'arrowleft', 'arrowright', 'arrowup', ' ', '1', '2', '3', 'q', 'e', 'enter', 'backspace', 'r'];
+  const handled = ['a', 'd', 'w', 'arrowleft', 'arrowright', 'arrowup', ' ', '1', '2', '3', 'q', 'e', 'enter', 'backspace', 'r', 'z', 'escape'];
   if (!handled.includes(key)) return; event.preventDefault(); keys.add(key); updateInput();
   if (event.repeat) return;
   if (['1', '2', '3'].includes(key)) select(STAMPS[Number(key) - 1]);
@@ -122,6 +141,8 @@ window.addEventListener('keydown', event => {
   }
   if (key === 'enter') placeAt(focus);
   if (key === 'backspace' && selected) { game.reclaim(selected); syncControls(); }
+  if (key === 'z') undoStamp();
+  if (key === 'escape') pauseGame();
   if (key === 'r') startRoom(game.index);
 });
 window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); updateInput(); });
@@ -137,14 +158,14 @@ document.querySelectorAll('[data-control]').forEach(button => {
 function frame(time) {
   if (!previousTime) previousTime = time;
   const elapsed = Math.min((time - previousTime) / 1000, .08); previousTime = time;
-  if (mode === 'playing' && !$('#help-dialog').open && !document.hidden) {
+  if (mode === 'playing' && !$('#help-dialog').open && !$('#pause-dialog').open && !document.hidden) {
     accumulator += elapsed;
     while (accumulator >= 1 / 60 && mode === 'playing') { game.step(input); processEvents(); accumulator -= 1 / 60; }
   } else accumulator = 0;
-  renderer.draw(game, { selected, focus, pointer, preview: mode === 'intro' }); requestAnimationFrame(frame);
+  renderer.draw(game, { selected: mode === 'playing' ? selected : null, focus, pointer, preview: mode === 'intro' }); requestAnimationFrame(frame);
 }
 syncControls(); requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')) {
-  window.__POSTMARK__ = { game, startRoom, placeAt, select, get mode() { return mode; }, get selected() { return selected; }, get input() { return { ...input }; }, renderer };
+  window.__POSTMARK__ = { game, startRoom, placeAt, select, get mode() { return mode; }, get selected() { return selected; }, get focus() { return focus; }, get input() { return { ...input }; }, renderer };
 }

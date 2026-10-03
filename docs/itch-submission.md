@@ -10,7 +10,7 @@ Four short letters take you from the forgotten shore to an address you might rem
 
 ## Controls
 
-Move with A / D or the arrow keys. Jump with Space / W / Up. Select a stamp and click a dotted frame, or drag the stamp into place. Keys 1 / 2 / 3 select stamps; Q / E choose a frame; Enter places; Backspace reclaims. R restarts the room. Touch controls are available on mobile. Sound is optional.
+Move with A / D or the arrow keys. Jump with Space / W / Up. Select a stamp to preview its effect, then click a dotted frame or drag the stamp into place. Keys 1 / 2 / 3 select stamps; Q / E choose a frame; Enter places; Backspace reclaims; Z undoes the last stamp move. R restarts the room; Escape pauses. Undo and pause buttons and touch movement controls are available on mobile. Sound is optional.
 
 ## How DreamLayer was used
 

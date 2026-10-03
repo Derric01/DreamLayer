@@ -54,6 +54,35 @@ test('one Forest stamp cannot leave two bridges behind', () => {
 test('wrong stamps and unavailable worlds cannot change a room', () => {
   const game = new Game(); assert.equal(game.place('forest', 'tide'), false); assert.equal(game.place('ocean', 'missing'), false);
   assert.equal(game.moves, 0); assert.equal(game.placements.ocean, null);
+  assert.equal(game.canUndo, false);
+});
+
+test('undo restores successive bridge moves and a reclaimed stamp without moving the courier', () => {
+  const game = new Game(1); tick(game, 25);
+  const player = { ...game.player };
+  assert.equal(game.undo(), false);
+  game.place('forest', 'root-left'); game.place('forest', 'root-right'); game.reclaim('forest');
+  assert.equal(game.undo(), true); assert.equal(game.placements.forest, 'root-right');
+  assert.equal(game.undo(), true); assert.equal(game.placements.forest, 'root-left');
+  assert.deepEqual(game.platforms().filter(p => p.kind === 'root').map(p => p.id), ['root-left']);
+  assert.equal(game.undo(), true); assert.equal(game.placements.forest, null);
+  assert.equal(game.canUndo, false); assert.deepEqual(game.player, player);
+  assert.equal(game.drainEvents().filter(e => e.type === 'undo').length, 3);
+});
+
+test('undo affects only the previous stamp action and changes local gravity immediately', () => {
+  const game = new Game(3);
+  game.place('ocean', 'home-tide'); game.place('forest', 'home-root'); game.place('sky', 'home-sky');
+  game.reclaim('sky'); assert.equal(game.gravityAt(850, 250), 1);
+  game.undo(); assert.equal(game.gravityAt(850, 250), -1);
+  game.undo(); assert.equal(game.gravityAt(850, 250), 1);
+  assert.equal(game.placements.ocean, 'home-tide'); assert.equal(game.placements.forest, 'home-root');
+});
+
+test('unsuccessful placements do not create undo steps', () => {
+  const game = new Game(); game.place('ocean', 'tide');
+  assert.equal(game.place('ocean', 'tide'), false); assert.equal(game.place('ocean', 'missing'), false); assert.equal(game.reclaim('sky'), false);
+  game.undo(); assert.equal(game.placements.ocean, null); assert.equal(game.canUndo, false);
 });
 test('Sky gravity is local and reclaiming returns normal gravity', () => {
   const game = new Game(2); game.place('sky', 'updraft'); assert.equal(game.gravityAt(500, 350), -1); assert.equal(game.gravityAt(900, 350), 1);
@@ -63,13 +92,15 @@ test('falling cannot strand the player below an already raised Ocean lift', () =
   const game = new Game(); game.place('ocean', 'tide'); tick(game, 260); assert.equal(game.floats[0].y, 306);
   rightTo(game, 400); tick(game, 200); assert.ok(game.deaths > 0); assert.equal(game.placements.ocean, null); assert.equal(game.floats[0].y, 540);
   assert.equal(game.player.x, game.level.spawn.x);
+  assert.equal(game.canUndo, false); assert.equal(game.undo(), false, 'cannot restore an inaccessible raised lift after respawn');
 });
 test('holding jump does not repeatedly auto-jump after landing', () => {
   const game = new Game(); tick(game, 25); tick(game, 150, { jump: true }); assert.equal(game.player.grounded, true);
   const jumps = game.drainEvents().filter(e => e.type === 'jump'); assert.equal(jumps.length, 1);
 });
 test('restart clears world effects and delivered state', () => {
-  const game = new Game(); solve[0](game); game.load(0); assert.equal(game.delivered, false); assert.equal(game.moves, 0); assert.equal(game.placements.ocean, null);
+  const game = new Game(); solve[0](game); assert.equal(game.undo(), false, 'delivered rooms cannot be changed');
+  game.load(0); assert.equal(game.delivered, false); assert.equal(game.moves, 0); assert.equal(game.placements.ocean, null); assert.equal(game.canUndo, false);
   assert.equal(game.floats[0].y, 540);
 });
 test('simulation rejects invalid rooms and unsafe frame durations', () => {

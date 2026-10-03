@@ -13,6 +13,7 @@ export class Game {
     this.index = index;
     this.level = LEVELS[index];
     this.placements = { ocean: null, forest: null, sky: null };
+    this.history = [];
     this.floats = this.level.sockets.filter(s => s.float).map(s => ({ ...s.float, id: s.id, baseY: s.float.y, kind: 'float' }));
     this.time = 0;
     this.deaths = 0;
@@ -32,6 +33,7 @@ export class Game {
     if (this.delivered || !this.level.available.includes(type)) return false;
     const socket = this.level.sockets.find(s => s.id === id);
     if (!socket || socket.type !== type || this.placements[type] === id) return false;
+    this.rememberStamps();
     this.placements[type] = id;
     this.moves++;
     this.events.push({ type: 'stamp', stamp: type, id });
@@ -40,9 +42,25 @@ export class Game {
 
   reclaim(type) {
     if (this.delivered || !this.placements[type]) return false;
+    this.rememberStamps();
     this.placements[type] = null;
     this.moves++;
     this.events.push({ type: 'reclaim', stamp: type });
+    return true;
+  }
+
+  rememberStamps() {
+    this.history.push({ ...this.placements });
+    if (this.history.length > 64) this.history.shift();
+  }
+
+  get canUndo() { return !this.delivered && this.history.length > 0; }
+
+  undo() {
+    if (!this.canUndo) return false;
+    this.placements = this.history.pop();
+    this.moves++;
+    this.events.push({ type: 'undo' });
     return true;
   }
 
@@ -109,6 +127,8 @@ export class Game {
     if (a.y > HEIGHT + 50 || a.y + a.h < -60) {
       this.deaths++;
       this.events.push({ type: 'fall' });
+      // Undo applies only to stamp moves since the current checkpoint.
+      this.history = [];
       // The start checkpoint must always be able to reach the lift again.
       if (this.placements.ocean) {
         this.placements.ocean = null;
