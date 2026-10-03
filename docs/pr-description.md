@@ -1,6 +1,6 @@
-# Build POSTMARK, an immersive world-stamp puzzle platformer
+# Polish POSTMARK with movement combos and immersive fullscreen play
 
-POSTMARK is a four-letter puzzle platformer set in an impossible post office. Reusable Ocean, Forest, and Sky stamps raise crates, grow paths, and reverse local gravity. A fold dash, Tide vault, Root spring, Sky release, and twelve optional memories add movement combinations while the original four authored puzzle routes remain solvable.
+POSTMARK now gives its four-letter world-stamp puzzles more expressive movement: a fold dash, Tide vault, Root spring, Sky release, and twelve optional memories. The original Ocean lift, Forest bridge, and local Sky gravity routes remain solvable. Lantern checkpoints make the longer deliveries recoverable without repeating completed sections.
 
 The game fills its viewport, with a courier-following phone camera and a whole-room stamp map. A postal HUD, ability readiness, lantern checkpoints, seeded effects, afterimages, landing feedback, restrained shake, optional synthesized audio, paused dialogs, and a complete letter/victory/replay flow make actions and progression readable. One-way root bridges and swept vertical collision checks fix late-jump and thin-platform edge cases. Reduced motion, multitouch, input queuing, and unavailable-storage handling preserve reliable play.
 

@@ -4,7 +4,7 @@
 
 The user approved a small browser game for the DreamLayer jam and, on October 3, 2026, explicitly requested a substantial final gameplay and production/polish pass. Preserve the four-room postage-world concept and plain Canvas architecture. Dash, three world abilities, twelve optional memories, lantern checkpoints, immersive layouts, and stronger feedback are within that authorization. Do not expand into extra rooms/frameworks or live billable generation for players.
 
-Keep work on feat/postmark, update draft PR #1, and do not merge, deploy, publish, or submit without the owner's instruction. PR: https://github.com/Derric01/DreamLayer/pull/1.
+Keep work on feat/postmark-final-polish. Draft PR #2 is open against current main: https://github.com/Derric01/DreamLayer/pull/2. Do not merge, deploy, publish, or submit without the owner's instruction. The earlier prototype PR #1 was merged by the owner before this iteration.
 
 ## Implementation
 
@@ -36,7 +36,7 @@ Screenshots, browser-results.json, test profiles, API logs/cache, and dist are i
 
 ## Git and PR
 
-Remote main contains only the original README at 070ac8c. feat/postmark contains the game and preserves the base merge at 0afdfe3; no history rewrite. Draft PR #1 already exists. Update its title/description around the complete final game and pending DreamLayer art.
+The owner merged prototype PR #1 at 97fe5608cb3fd6340e405b2fcf8b269f75bcd3f5 on October 3. That is the current remote main. The final game pass is a0c0d30, on feat/postmark-final-polish; the existing feat/postmark branch also contains that commit. No history was rewritten. Final-polish PR #2 is open against main and stays draft while DreamLayer artwork is pending. Do not edit the merged prototype PR to describe unmerged features.
 
 Project/.git ownership differs from the sandbox account: use per-command safe.directory for this exact repository, remove inherited GIT_CONFIG_* variables from the child Git environment, and avoid global trust changes or the unrelated home repository. Git mutations may need sandbox escalation.
 
