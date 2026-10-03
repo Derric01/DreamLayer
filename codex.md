@@ -10,7 +10,7 @@ Keep work on feat/postmark-final-polish. Draft PR #2 is open against current mai
 
 Plain JavaScript ES modules, Canvas 2D, semantic HTML controls, CSS, and Node built-ins. No runtime dependencies. Simulation remains DOM-independent in engine.js; art.js provides a small bounded loader; rendering, audio, and flow remain separate. Authored geometry determines solvability.
 
-Fixed 60 Hz simulation, interpolation, jump buffer/coyote time, variable jumps, horizontal dash, contextual pulses, one-way root bridges, swept vertical collisions, recoverable falls, and mid-route checkpoints. Memories survive falls but reset on room restart. Undo holds 64 stamp snapshots without rewinding position; it clears on falls/restart. Checkpoint falls preserve reachable placed worlds; start falls reset Ocean.
+Fixed 60 Hz simulation, interpolation, jump buffer/coyote time, variable jumps, horizontal dash, contextual pulses, one-way root bridges, swept vertical collisions, recoverable falls, and mid-route checkpoints. Memories survive falls but reset on room restart. Undo holds 64 stamp snapshots without rewinding position; it clears on falls/restart. Checkpoint falls preserve reachable placed worlds; start falls reset Ocean. An early Ocean stamp leaves the crate at its boarding height until the courier lands on it; the lift then continues its journey. Jump release only trims an ordinary jump, never a Tide vault or Root spring.
 
 A full-viewport shell with desktop room overview, portrait/short touch landscape camera, selectable stamp map, pointer/keyboard/multitouch controls, optional sound/fullscreen, native paused dialogs, complete letter/victory/replay flow, and storage failure handling. Effect pools/pixel density are bounded and artwork/room scenes cached. Reduced motion suppresses cosmetic animation.
 
@@ -26,7 +26,7 @@ The packaged game contains no API credentials or generation tooling, makes no li
 
 ## Verification
 
-Run npm test, npm run check, npm run build, npm run test:browser, and ZIP integrity/security checks. There are 31 deterministic tests covering the four original routes, twelve-memory routes, movement abilities, recovery/checkpoints, undo, collision regressions, and robust artwork errors/timeouts.
+Run npm test, npm run check, npm run build, npm run test:browser, and ZIP integrity/security checks. There are 37 deterministic tests covering the four original routes, twelve-memory routes, movement abilities, recovery/checkpoints, undo, collision regressions, robust artwork errors/timeouts, early Ocean boarding in both lift rooms, and jump release during world abilities.
 
 The browser harness uses a fresh isolated Chrome/Edge profile and dynamic debugging port, with a Python websocket-client loopback bridge. On this Windows host the sandbox can reset its DevTools WebSocket; the authorized local browser verification may need sandbox escalation. Never reuse or terminate the owner's browser profile.
 

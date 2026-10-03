@@ -27,11 +27,11 @@ try {
   async function tap(keyName) { await key(keyName); await key(keyName,false); await sleep(40); }
   async function load() { await chrome.call('Page.navigate',{url:base+'/?test=1'}); await waitFor(()=>ev('!!window.__POSTMARK__'),'game load'); await sleep(100); }
   async function settle() { await waitFor(()=>ev(g+'.player.grounded || '+g+'.delivered'),'courier lands'); }
-  async function moveTo(x, jump=false) {
+  async function moveTo(x, jump=false, releaseJump=true) {
     if(await ev(g+'.player.x >= '+x+' || '+g+'.delivered')) return;
     await key('d'); if(jump) await key(' ');
     try { assert.equal(await ev('new Promise(resolve => {const end=performance.now()+10000;function check(){if('+g+'.player.x >= '+x+' || '+g+'.delivered)return resolve(true);if(performance.now()>end)return resolve(false);requestAnimationFrame(check)}check()})'),true,'walk to '+x); }
-    finally { await key('d',false); if(jump) await key(' ',false); }
+    finally { await key('d',false); if(jump && releaseJump) await key(' ',false); }
   }
   async function fullHop() { await settle(); await key(' '); await sleep(850); await key(' ',false); await settle(); }
   async function alignTo(x) {
@@ -72,11 +72,21 @@ try {
   await sleep(50); const to=await world(520,225);
   await chrome.call('Input.dispatchMouseEvent',{type:'mouseMoved',...to,button:'left',buttons:1});
   await chrome.call('Input.dispatchMouseEvent',{type:'mouseReleased',...to,button:'left',clickCount:1}); await sleep(60);
-  assert.equal(await ev(g+'.placements.ocean'),'tide'); await tap('r'); await settle();
+  assert.equal(await ev(g+'.placements.ocean'),'tide'); await sleep(200);
+  assert.equal(await ev(g+'.floats[0].y'),540,'an early Ocean stamp waits at the boarding height');
+  await moveTo(310); await moveTo(480,true); await settle();
+  assert.equal(await ev(g+'.player.riding'),'tide');
+  await waitFor(()=>ev(g+'.floats[0].y < 540'),'boarding starts the lift');
+  await capture('production-ocean-early-boarding'); await tap('r'); await settle();
 
   // Exercise a tide vault chained into an actual fold dash.
-  await moveTo(310); await moveTo(480,true); await settle(); await place('ocean'); await tap('f');
-  assert.ok(await ev(g+'.player.vy') < -450,'Tide vault launches the courier'); await tap('Shift');
+  await moveTo(310); await moveTo(480,true,false); await settle(); await place('ocean'); await tap('f');
+  assert.ok(await ev(g+'.player.vy') < -450,'Tide vault launches the courier');
+  const launchBeforeRelease=await ev('({vy:'+g+'.player.vy,time:'+g+'.time})');
+  await key(' ',false); await sleep(40);
+  const launchAfterRelease=await ev('({vy:'+g+'.player.vy,time:'+g+'.time})');
+  assert.ok(Math.abs(launchAfterRelease.vy-launchBeforeRelease.vy-1250*(launchAfterRelease.time-launchBeforeRelease.time))<1,'releasing the earlier jump preserves the Tide vault arc');
+  await tap('Shift');
   assert.ok(await ev(g+'.player.dashTime')>0,'short key press queues a dash'); await capture('production-tide-combo');
   await tap('r'); await settle();
 
@@ -174,7 +184,7 @@ try {
     await chrome.call('Fetch.disable');faults.push(fault);
   }
   assert.equal(chrome.errors.length,0,chrome.errors.join('\n'));
-  const summary={passed:true,realControlRoutes:outcomes,artFaults:faults,performance,frameTiming,screenshots:shots,checks:['all four deliveries through real keyboard controls','stamp dragging, preview, undo, pause and native fullscreen','tide vault, root spring and sky release','optional memory detours and checkpoint activation','victory and replay','desktop, laptop, ultrawide, phone, landscape and tablet','multi-touch and reduced motion','storage unavailable','API/art errors and bounded fallback','no runtime exceptions']};
+  const summary={passed:true,realControlRoutes:outcomes,artFaults:faults,performance,frameTiming,screenshots:shots,checks:['all four deliveries through real keyboard controls','stamp dragging, preview, undo, pause and native fullscreen','tide vault, root spring and sky release','early Ocean placement waits for boarding','jump release preserves world launches','optional memory detours and checkpoint activation','victory and replay','desktop, laptop, ultrawide, phone, landscape and tablet','multi-touch and reduced motion','storage unavailable','API/art errors and bounded fallback','no runtime exceptions']};
   await writeFile('artifacts/browser-results.json',JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));
 }catch(error){
   if(chrome){console.log('Failure state: '+JSON.stringify(await chrome.evaluate('window.__POSTMARK__ ? ({player:__POSTMARK__.game.player,ability:__POSTMARK__.game.ability(),input:__POSTMARK__.input,mode:__POSTMARK__.mode,falls:__POSTMARK__.game.deaths,memories:[...__POSTMARK__.game.collected]}) : null'))); const shot=await chrome.call('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/production-failure.png',Buffer.from(shot.data,'base64'));}

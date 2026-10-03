@@ -89,8 +89,9 @@ test('Sky gravity is local and reclaiming returns normal gravity', () => {
   game.reclaim('sky'); assert.equal(game.gravityAt(500, 350), 1);
 });
 test('falling cannot strand the player below an already raised Ocean lift', () => {
-  const game = new Game(); game.place('ocean', 'tide'); tick(game, 260); assert.equal(game.floats[0].y, 306);
-  rightTo(game, 400); tick(game, 200); assert.ok(game.deaths > 0); assert.equal(game.placements.ocean, null); assert.equal(game.floats[0].y, 540);
+  const game = new Game(); tick(game, 25); rightTo(game, 310); rightTo(game, 480, { jump: true }); land(game);
+  game.place('ocean', 'tide'); tick(game, 260); assert.equal(game.floats[0].y, 306);
+  rightTo(game, 640); tick(game, 200); assert.ok(game.deaths > 0); assert.equal(game.placements.ocean, null); assert.equal(game.floats[0].y, 540);
   assert.equal(game.player.x, game.level.spawn.x);
   assert.equal(game.canUndo, false); assert.equal(game.undo(), false, 'cannot restore an inaccessible raised lift after respawn');
 });
@@ -150,6 +151,34 @@ test('a late jump passes through a root underside and lands on its top', () => {
   const game = new Game(1); game.place('forest', 'root-left'); tick(game, 25); game.player.x = 260;
   tick(game, 40, { right: true, jump: true });
   assert.equal(game.deaths, 0); assert.equal(game.player.grounded, true); assert.equal(game.player.riding, 'root-left'); assert.equal(game.player.y, 448);
+});
+
+test('placing Ocean before boarding keeps both lift rooms accessible', async t => {
+  for (const index of [0, 3]) await t.test(`early Ocean in letter ${index + 1}`, () => {
+    const game = new Game(index), lift = game.floats[0];
+    game.place('ocean', lift.id); tick(game, 240);
+    assert.equal(lift.y, lift.baseY, 'an empty lift waits for its passenger');
+    solve[index](game);
+    assert.equal(game.delivered, true); assert.equal(game.deaths, 0);
+    assert.equal(lift.y, lift.targetY, 'boarding starts the full lift journey');
+  });
+});
+
+test('releasing an earlier jump cannot shorten a world launch', async t => {
+  for (const index of [0, 1]) await t.test(index === 0 ? 'Tide vault' : 'Root spring', () => {
+    const game = new Game(index);
+    if (index === 1) game.place('forest', 'root-left');
+    tick(game, 25); rightTo(game, index === 0 ? 310 : 238);
+    rightTo(game, index === 0 ? 480 : 385, { jump: true });
+    for (let i = 0; i < 120 && !game.player.grounded; i++) game.step({ jump: true });
+    assert.equal(game.player.riding, index === 0 ? 'tide' : 'root-left');
+    if (index === 0) game.place('ocean', 'tide');
+    game.step({ jump: true, pulse: true });
+    assert.ok(game.player.vy < -550, 'the world ability launches at full strength');
+    game.step({ jump: false });
+    assert.ok(game.player.vy < -500, 'releasing Space only cuts an ordinary jump');
+    assert.equal(game.drainEvents().filter(e => e.type === 'pulse').length, 1);
+  });
 });
 
 test('all twelve memories are reachable through movement and the world abilities', async t => {

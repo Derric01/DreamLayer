@@ -1,6 +1,6 @@
 # Polish POSTMARK with movement combos and immersive fullscreen play
 
-POSTMARK now gives its four-letter world-stamp puzzles more expressive movement: a fold dash, Tide vault, Root spring, Sky release, and twelve optional memories. The original Ocean lift, Forest bridge, and local Sky gravity routes remain solvable. Lantern checkpoints make the longer deliveries recoverable without repeating completed sections.
+POSTMARK now gives its four-letter world-stamp puzzles more expressive movement: a fold dash, Tide vault, Root spring, Sky release, and twelve optional memories. The original Ocean lift, Forest bridge, and local Sky gravity routes remain solvable. Lantern checkpoints make the longer deliveries recoverable without repeating completed sections. Ocean now waits for the courier to board before raising its crate, so selecting the first stamp early cannot make the lift inaccessible. Releasing an earlier jump no longer shortens Tide vault or Root spring.
 
 The game fills its viewport, with a courier-following phone camera and a whole-room stamp map. A postal HUD, ability readiness, lantern checkpoints, seeded effects, afterimages, landing feedback, restrained shake, optional synthesized audio, paused dialogs, and a complete letter/victory/replay flow make actions and progression readable. One-way root bridges and swept vertical collision checks fix late-jump and thin-platform edge cases. Reduced motion, multitouch, input queuing, and unavailable-storage handling preserve reliable play.
 
@@ -8,7 +8,7 @@ DreamLayer is a development art workflow: an Ocean master and Forest/Sky referen
 
 Validation:
 
-- 31 deterministic tests pass, covering all four original solutions, all twelve memories, movement abilities, undo, checkpoints, collision regressions, and artwork error/deadline behavior.
+- 37 deterministic tests pass, covering all four original solutions, all twelve memories, movement abilities, undo, checkpoints, collision regressions, early Ocean boarding, independent world-launch arcs, and artwork error/deadline behavior.
 - Actual packaged Chrome keyboard playthrough completes every letter and all twelve memories with zero falls, then restarts through the victory UI.
 - Browser checks pass for drag placement, keyboard/button undo, pause/help, native fullscreen, multitouch, reduced motion, storage failure, and six artwork failure/success fixtures.
 - Laptop, ultrawide, 320px/390px phone, phone landscape, and tablet layouts pass overflow checks. Short-screen endings retain access to replay. Captures are visually reviewed.

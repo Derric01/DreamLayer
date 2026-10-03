@@ -6,7 +6,7 @@ const p = (x, y, w, h = 20) => ({ x, y, w, h });
 export const LEVELS = [
   {
     title: 'To the sea that forgot its shore', subtitle: 'The rising tide',
-    hint: 'Jump onto the wooden crate, then place Ocean in its frame. Ride the tide up.',
+    hint: 'Place Ocean and jump onto the wooden crate. The tide waits for you, then carries you up.',
     available: ['ocean'], spawn: { x: 110, y: 505 }, goal: { x: 949, y: 270 },
     platforms: [p(50, 548, 310), p(690, 310, 350)],
     sockets: [{ id: 'tide', type: 'ocean', x: 520, y: 225, field: p(365, 205, 290, 375), float: { ...p(455, 540, 140, 24), targetY: 306 } }],

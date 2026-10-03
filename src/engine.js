@@ -18,7 +18,7 @@ export class Game {
     this.level = LEVELS[index];
     this.placements = { ocean: null, forest: null, sky: null };
     this.history = [];
-    this.floats = this.level.sockets.filter(s => s.float).map(s => ({ ...s.float, id: s.id, baseY: s.float.y, kind: 'float' }));
+    this.floats = this.level.sockets.filter(s => s.float).map(s => ({ ...s.float, id: s.id, baseY: s.float.y, kind: 'float', launched: false }));
     this.time = 0;
     this.deaths = 0;
     this.moves = 0;
@@ -35,7 +35,7 @@ export class Game {
   }
 
   spawn() {
-    this.player = { ...(this.checkpoint?.spawn ?? this.level.spawn), w: 23, h: 32, vx: 0, vy: 0, grounded: false, gravity: 1, coyote: 0, jumpBuffer: 0, facing: 1, riding: null, dashTime: 0, dashCooldown: 0, dashAvailable: true };
+    this.player = { ...(this.checkpoint?.spawn ?? this.level.spawn), w: 23, h: 32, vx: 0, vy: 0, grounded: false, gravity: 1, coyote: 0, jumpBuffer: 0, jumpCut: false, facing: 1, riding: null, dashTime: 0, dashCooldown: 0, dashAvailable: true };
     this.previousPlayer = { ...this.player };
     this.skyRelease = 0;
     this.events.push({ type: 'spawn' });
@@ -97,7 +97,7 @@ export class Game {
     const a = this.player;
     if (ability.type === 'sky') { this.skyRelease = .65; a.gravity = 1; a.vy = 95; }
     else { a.vy = -(ability.type === 'ocean' ? 610 : 660); a.gravity = 1; }
-    a.grounded = false; a.coyote = 0; a.riding = null; a.dashTime = 0; a.dashAvailable = true;
+    a.grounded = false; a.coyote = 0; a.riding = null; a.jumpCut = false; a.dashTime = 0; a.dashAvailable = true;
     this.pulseCooldown = PHYSICS.pulseCooldown;
     this.events.push({ type: 'pulse', world: ability.type, name: ability.name, x: a.x + a.w / 2, y: a.y + a.h / 2 });
     return true;
@@ -120,14 +120,18 @@ export class Game {
     a.dashCooldown = Math.max(0, a.dashCooldown - dt);
     // Float movement carries a rider; ordinary collision handles every other contact.
     for (const platform of this.floats) {
-      const target = this.placements.ocean === platform.id ? platform.targetY : platform.baseY;
+      const active = this.placements.ocean === platform.id;
+      if (!active) platform.launched = false;
+      if (active && a.grounded && a.riding === platform.id) platform.launched = true;
+      // A stamp placed early must not send its only boarding surface out of reach.
+      const target = active && platform.launched ? platform.targetY : platform.baseY;
       const before = platform.y;
       platform.y = toward(platform.y, target, PHYSICS.floatSpeed * dt);
       if (a.riding === platform.id && a.grounded) a.y += platform.y - before;
     }
     const previousGravity = a.gravity;
     a.gravity = this.gravityAt(a.x + a.w / 2, a.y + a.h / 2);
-    if (previousGravity !== a.gravity) { a.grounded = false; a.coyote = 0; a.vy *= .2; a.dashAvailable = true; this.events.push({ type: 'gravity', direction: a.gravity, x: a.x + a.w / 2, y: a.y + a.h / 2 }); }
+    if (previousGravity !== a.gravity) { a.grounded = false; a.coyote = 0; a.jumpCut = false; a.vy *= .2; a.dashAvailable = true; this.events.push({ type: 'gravity', direction: a.gravity, x: a.x + a.w / 2, y: a.y + a.h / 2 }); }
     const axis = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     if (axis) a.facing = axis;
     if (a.grounded) a.dashAvailable = true;
@@ -142,12 +146,15 @@ export class Game {
     a.vx = a.dashTime > 0 ? a.facing * PHYSICS.dashSpeed : toward(a.vx, axis * PHYSICS.speed, PHYSICS.acceleration * dt);
     if (input.jump && !this.jumpWasDown) a.jumpBuffer = PHYSICS.buffer;
     else a.jumpBuffer = Math.max(0, a.jumpBuffer - dt);
-    if (!input.jump && this.jumpWasDown && a.vy * a.gravity < -210) a.vy *= .65;
+    if (!input.jump && this.jumpWasDown) {
+      if (a.jumpCut && a.vy * a.gravity < -210) a.vy *= .65;
+      a.jumpCut = false;
+    }
     this.jumpWasDown = !!input.jump;
     a.coyote = a.grounded ? PHYSICS.coyote : Math.max(0, a.coyote - dt);
     if (a.jumpBuffer > 0 && a.coyote > 0) {
       a.vy = -a.gravity * PHYSICS.jump;
-      a.grounded = false; a.coyote = 0; a.jumpBuffer = 0; a.riding = null;
+      a.grounded = false; a.coyote = 0; a.jumpBuffer = 0; a.jumpCut = true; a.riding = null;
       this.events.push({ type: 'jump', x: a.x + a.w / 2, y: a.y + a.h, direction: a.gravity });
     }
     a.vy = Math.max(-PHYSICS.terminal, Math.min(PHYSICS.terminal, a.vy + a.gravity * PHYSICS.gravity * dt * (a.dashTime > 0 ? .08 : 1)));
@@ -179,6 +186,7 @@ export class Game {
       a.vy = 0;
     }
     if (a.grounded) {
+      a.jumpCut = false;
       a.dashAvailable = true;
       if (!wasGrounded && impact > 160) this.events.push({ type: 'land', x: a.x + a.w / 2, y: a.gravity === 1 ? a.y + a.h : a.y, impact });
       const checkpoint = this.level.checkpoint;
@@ -194,7 +202,7 @@ export class Game {
       // The start checkpoint must always be able to reach the lift again.
       if (this.placements.ocean && !this.checkpoint) {
         this.placements.ocean = null;
-        for (const floating of this.floats) floating.y = floating.baseY;
+        for (const floating of this.floats) { floating.y = floating.baseY; floating.launched = false; }
       }
       this.spawn();
       return;

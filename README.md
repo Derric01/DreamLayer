@@ -34,7 +34,7 @@ Touch controls support simultaneous movement and jumping. Dash and world abiliti
 
 ## Borrowed worlds and movement
 
-Ocean raises a floating crate; inside its field, **Tide vault** launches the courier. Forest creates a one-way root bridge; standing on it unlocks **Root spring**. Sky reverses gravity inside its marked region; **Sky release** briefly restores normal gravity so you can drop before gravity returns.
+Ocean waits for you to board its floating crate, then raises it; inside its field, **Tide vault** launches the courier. Forest creates a one-way root bridge; standing on it unlocks **Root spring**. Sky reverses gravity inside its marked region; **Sky release** briefly restores normal gravity so you can drop before gravity returns.
 
 Chain a vault or spring into a dash, or dash out of a gravity field. Landing, a world pulse, a gravity change, and finding a memory recharge the air dash. Buffered jumps and a short grace period at ledges make controls forgiving. Optional glowing memories give each room an additional movement route.
 
@@ -72,7 +72,7 @@ npm run build
 npm run test:browser
 ```
 
-The 31 deterministic tests cover all four original solutions, all twelve optional memories, dash and variable jumps, contextual abilities, one-way roots, swept collisions, undo, checkpoints, recovery, and bounded artwork failure handling.
+The 37 deterministic tests cover all four original solutions, all twelve optional memories, dash and variable jumps, contextual abilities, one-way roots, swept collisions, undo, checkpoints, recovery, early Ocean placement, independent world-launch arcs, and bounded artwork failure handling.
 
 The packaged-browser harness plays all four deliveries through actual keyboard input, exercises pointer dragging, abilities, undo, native fullscreen, pause, victory/replay, multi-touch, reduced motion, unavailable storage, and art fault injection. It checks laptop, ultrawide, phone, landscape, and tablet layouts, captures screenshots, and records draw-call and animation-frame timings in ignored `artifacts/browser-results.json`.
 
