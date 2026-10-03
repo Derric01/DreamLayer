@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ocean",
+    "prompt": "Create a finished landscape illustration for the inside of a vintage postage stamp in POSTMARK, a tender surreal puzzle game set in an impossible post office. A calm impossible ocean, layered rolling teal waves, one tiny lighthouse on an isolated rock toward the left, pale gold sun near the upper right, a few distant seabirds. Mid-century screen-printed travel illustration, elegant deliberate shapes, subtle analog ink texture, desaturated blue teal and pale butter yellow, richly composed and atmospheric. Landscape 4:3 composition. Fill the entire image edge to edge. No words, no typography, no numbers, no border, no stamp perforations, no mockup, no UI. Preserve a clear readable silhouette when cropped into a small postage stamp. This is the master visual reference for a coordinated Ocean, Forest, and Sky series."
+  },
+  {
+    "id": "forest",
+    "prompt": "Create a companion landscape illustration for the same POSTMARK vintage-postage-stamp series. Match the reference image's exact screen-print art direction, restrained shape language, texture, atmosphere, and pale gold lighting, while replacing the ocean with a dream forest: layered slender evergreen trees in jade, sage, and deep moss green, a narrow sunlit path disappearing between the trees, one pale gold sun near the upper right, a few tiny fireflies. Tender, impossible, inviting. Landscape 4:3 composition. Fill edge to edge. No words, no typography, no numbers, no border, no stamp perforations, no mockup, no UI. Readable at postage stamp size. Keep the artistic identity of the reference; change only the landscape subject and its corresponding palette."
+  },
+  {
+    "id": "sky",
+    "prompt": "Create a companion landscape illustration for the same POSTMARK vintage-postage-stamp series. Match the reference image's exact screen-print art direction, restrained shape language, texture, atmosphere, and pale gold lighting, while replacing the ocean with an impossible sky: broad layers of soft ivory clouds, dusty blue atmosphere, warm pale gold sun near the upper right, tiny distant swallows and a small floating mountain near the lower left. A dream where up has become a matter of opinion. Tender, spacious, inviting. Landscape 4:3 composition. Fill edge to edge. No words, no typography, no numbers, no border, no stamp perforations, no mockup, no UI. Readable at postage stamp size. Keep the artistic identity of the reference; change only the landscape subject and its corresponding palette."
+  }
+]

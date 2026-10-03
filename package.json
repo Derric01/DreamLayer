@@ -1,0 +1,17 @@
+{
+  "name": "postmark",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A four-letter puzzle game about postage stamps containing miniature worlds.",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test tests/game.test.js",
+    "check": "node scripts/check.mjs",
+    "build": "node scripts/build.mjs",
+    "test:browser": "node scripts/browser-test.mjs",
+    "art:check": "node scripts/dreamlayer.mjs check",
+    "art:generate": "node scripts/dreamlayer.mjs generate"
+  },
+  "engines": { "node": ">=22.12" }
+}
